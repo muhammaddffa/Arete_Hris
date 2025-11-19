@@ -1,0 +1,49 @@
+export const RESPONSE_MESSAGES = {
+  DEPARTMENT: {
+    CREATED: 'Departemen berhasil dibuat',
+    UPDATED: 'Departemen berhasil diupdate',
+    DELETED: 'Departemen berhasil dihapus',
+    FOUND: 'Departemen ditemukan',
+    LIST: 'Daftar departemen berhasil diambil',
+    NOT_FOUND: 'Departemen tidak ditemukan',
+    ALREADY_EXISTS: 'Departemen dengan nama tersebut sudah ada',
+    HAS_JABATAN: 'Departemen tidak dapat dihapus karena masih memiliki jabatan',
+  },
+
+  ROLE: {
+    CREATED: 'Role berhasil dibuat',
+    UPDATED: 'Role berhasil diupdate',
+    DELETED: 'Role berhasil dihapus',
+    FOUND: 'Role ditemukan',
+    LIST: 'Daftar role berhasil diambil',
+    NOT_FOUND: 'Role tidak ditemukan',
+  },
+
+  EMPLOYEE: {
+    CREATED: 'Karyawan berhasil dibuat',
+    UPDATED: 'Karyawan berhasil diupdate',
+    DELETED: 'Karyawan berhasil dihapus',
+    FOUND: 'Karyawan ditemukan',
+    LIST: 'Daftar karyawan berhasil diambil',
+    NOT_FOUND: 'Karyawan tidak ditemukan',
+  },
+
+  AUTH: {
+    LOGIN_SUCCESS: 'Login berhasil',
+    LOGOUT_SUCCESS: 'Logout berhasil',
+    REGISTER_SUCCESS: 'Registrasi berhasil',
+    INVALID_CREDENTIALS: 'Username atau password salah',
+    ACCOUNT_LOCKED: 'Akun Anda terkunci. Silakan coba lagi nanti',
+    TOKEN_EXPIRED: 'Token telah expired',
+    UNAUTHORIZED: 'Anda tidak memiliki akses',
+  },
+
+  GENERAL: {
+    SUCCESS: 'Operasi berhasil',
+    FAILED: 'Operasi gagal',
+    VALIDATION_ERROR: 'Validasi gagal',
+    INTERNAL_ERROR: 'Terjadi kesalahan pada server',
+    NOT_FOUND: 'Data tidak ditemukan',
+    BAD_REQUEST: 'Request tidak valid',
+  },
+};

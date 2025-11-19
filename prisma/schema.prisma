@@ -1,0 +1,194 @@
+// prisma/schema.prisma
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model RefRole {
+  idRole    Int      @id @default(autoincrement()) @map("id_role")
+  namaRole  String   @unique @map("nama_role") @db.VarChar(50)
+  deskripsi String?  @db.Text
+  level     Int      // 1=superadmin, 2=admin/hrd/finance, 3=manager, 4=karyawan
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  departemen  RefDepartemen[]
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@map("refrole")
+}
+
+model RefPermission {
+  idPermission   Int      @id @default(autoincrement()) @map("id_permission")
+  namaPermission String   @unique @map("nama_permission") @db.VarChar(50)
+  deskripsi      String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  roles RolePermission[]
+
+  @@map("refpermission")
+}
+
+model RolePermission {
+  idRole       Int @map("id_role")
+  idPermission Int @map("id_permission")
+
+  // Relations
+  role       RefRole       @relation(fields: [idRole], references: [idRole], onDelete: Cascade)
+  permission RefPermission @relation(fields: [idPermission], references: [idPermission], onDelete: Cascade)
+
+  @@id([idRole, idPermission])
+  @@map("role_permission")
+}
+
+// ============================================
+// MASTER DATA - DEPARTEMEN, JABATAN (UUID)
+// ============================================
+
+model RefDepartemen {
+  idDepartemen   String   @id @default(uuid()) @map("id_departemen") @db.Uuid
+  namaDepartemen String   @map("nama_departemen") @db.VarChar(100)
+  idRoleDefault  Int      @map("id_role_default") // Int karena relasi ke RefRole
+  deskripsi      String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  roleDefault RefRole       @relation(fields: [idRoleDefault], references: [idRole])
+  jabatan     RefJabatan[]
+
+  @@map("refdepartemen")
+}
+
+model RefJabatan {
+  idJabatan        String   @id @default(uuid()) @map("id_jabatan") @db.Uuid
+  namaJabatan      String   @map("nama_jabatan") @db.VarChar(100)
+  idDepartemen     String   @map("id_departemen") @db.Uuid
+  idAtasan         String?  @map("id_atasan") @db.Uuid // FK ke RefKaryawan
+  deskripsiJabatan String?  @map("deskripsi_jabatan") @db.Text
+  status           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  departemen RefDepartemen @relation(fields: [idDepartemen], references: [idDepartemen])
+  atasan     RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan])
+  karyawan   RefKaryawan[] @relation("KaryawanJabatan")
+
+  @@index([idDepartemen])
+  @@index([idAtasan])
+  @@map("refjabatan")
+}
+
+// ============================================
+// KARYAWAN (UUID)
+// ============================================
+
+enum StatusKaryawan {
+  aktif
+  rejected
+  candidate
+  resign
+}
+
+enum JenisKelamin {
+  L // Laki-laki
+  P // Perempuan
+}
+
+enum StatusPernikahan {
+  belum_menikah
+  menikah
+  cerai
+}
+
+model RefKaryawan {
+  idKaryawan       String            @id @default(uuid()) @map("id_karyawan") @db.Uuid
+  nik              String?           @unique @db.VarChar(20)
+  npwp             String?           @db.VarChar(30)
+  skck             String?           @db.VarChar(255)
+  suratKesehatan   String?           @map("surat_kesehatan") @db.VarChar(255)
+  cv               String?           @db.VarChar(255)
+  nama             String            @db.VarChar(100)
+  tempatLahir      String            @map("tempat_lahir") @db.VarChar(100)
+  tanggalLahir     DateTime          @map("tanggal_lahir") @db.Date
+  jenisKelamin     JenisKelamin      @map("jenis_kelamin")
+  statusPernikahan StatusPernikahan  @map("status_pernikahan")
+  pasfoto          String?           @db.VarChar(255)
+  agama            String            @db.VarChar(20)
+  noHpPribadi      String            @map("no_hp_pribadi") @db.VarChar(20)
+  email            String?           @db.VarChar(100)
+  alamat           String?           @db.Text
+  idJabatan        String            @map("id_jabatan") @db.Uuid
+  namaBank         String?           @map("nama_bank") @db.VarChar(50)
+  nomorRekening    String?           @map("nomor_rekening") @db.VarChar(50)
+  statusKeaktifan  Boolean           @default(true) @map("status_keaktifan")
+  tanggalMasuk     DateTime          @map("tanggal_masuk") @db.Date
+  tanggalResign    DateTime?         @map("tanggal_resign") @db.Date
+  status           StatusKaryawan    @default(candidate)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  jabatan       RefJabatan   @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan])
+  jabatanAtasan RefJabatan[] @relation("AtasanJabatan")
+  user          User?
+
+  @@index([idJabatan])
+  @@index([nik])
+  @@index([status])
+  @@map("refkaryawan")
+}
+
+// ============================================
+// USER & AUTHENTICATION (UUID)
+// ============================================
+
+model User {
+  idUser            String    @id @default(uuid()) @map("id_user") @db.Uuid
+  idKaryawan        String?   @unique @map("id_karyawan") @db.Uuid
+  username          String    @unique @db.VarChar(50)
+  email             String    @unique @db.VarChar(100)
+  passwordHash      String    @map("password_hash") @db.VarChar(255)
+  useDepartmentRole Boolean   @default(true) @map("use_department_role")
+  isActive          Boolean   @default(true) @map("is_active")
+  lastLogin         DateTime? @map("last_login")
+  loginAttempts     Int       @default(0) @map("login_attempts")
+  lockedUntil       DateTime? @map("locked_until")
+  resetToken        String?   @map("reset_token") @db.VarChar(100)
+  resetTokenExpires DateTime? @map("reset_token_expires")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  karyawan  RefKaryawan? @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: SetNull)
+  userRoles UserRole[]
+
+  @@index([username])
+  @@index([email])
+  @@index([idKaryawan])
+  @@map("users")
+}
+
+model UserRole {
+  idUser String @map("id_user") @db.Uuid
+  idRole Int    @map("id_role") // Int karena relasi ke RefRole
+
+  // Relations
+  user User    @relation(fields: [idUser], references: [idUser], onDelete: Cascade)
+  role RefRole @relation(fields: [idRole], references: [idRole], onDelete: Cascade)
+
+  @@id([idUser, idRole])
+  @@map("user_role")
+}
