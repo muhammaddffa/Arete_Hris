@@ -1,322 +1,345 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting seed...');
+  console.log('🌱 Starting seed for HR System...\n');
 
-  // 1. Seed Roles
-  console.log('📝 Seeding Roles...');
-  const roles = await Promise.all([
-    prisma.refRole.upsert({
-      where: { namaRole: 'Super Admin' },
-      update: {},
-      create: {
-        namaRole: 'Super Admin',
-        deskripsi: 'Super administrator dengan akses penuh ke seluruh sistem',
+  console.log('🗑️  Cleaning existing data...');
+
+  await prisma.rolePermission.deleteMany();
+  await prisma.userRole.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.refKaryawan.deleteMany();
+  await prisma.refJabatan.deleteMany();
+  await prisma.refDepartemen.deleteMany();
+  await prisma.refPermission.deleteMany();
+  await prisma.refRole.deleteMany();
+
+  await prisma.$executeRaw`ALTER SEQUENCE refrole_id_role_seq RESTART WITH 1`;
+  await prisma.$executeRaw`ALTER SEQUENCE refpermission_id_permission_seq RESTART WITH 1`;
+
+  console.log('✅ Database cleaned\n');
+
+  // ============================================
+  // 2. SEED ROLES (INT - Master Data)
+  // ============================================
+  console.log('📝 Creating roles...');
+
+  const roles = await prisma.$transaction([
+    prisma.refRole.create({
+      data: {
+        namaRole: 'superadmin',
+        deskripsi: 'Full system access',
         level: 1,
       },
     }),
-    prisma.refRole.upsert({
-      where: { namaRole: 'Admin HRD' },
-      update: {},
-      create: {
-        namaRole: 'Admin HRD',
-        deskripsi: 'Administrator HRD yang mengelola data karyawan',
+    prisma.refRole.create({
+      data: {
+        namaRole: 'hrd',
+        deskripsi: 'HR Department - Manage recruitment & employee data',
         level: 2,
       },
     }),
-    prisma.refRole.upsert({
-      where: { namaRole: 'Finance' },
-      update: {},
-      create: {
-        namaRole: 'Finance',
-        deskripsi: 'Tim finance yang mengelola gaji dan keuangan',
+    prisma.refRole.create({
+      data: {
+        namaRole: 'admin',
+        deskripsi: 'System administrator - Manage system settings',
         level: 2,
       },
     }),
-    prisma.refRole.upsert({
-      where: { namaRole: 'Manager' },
-      update: {},
-      create: {
-        namaRole: 'Manager',
-        deskripsi: 'Manager departemen',
+    prisma.refRole.create({
+      data: {
+        namaRole: 'finance',
+        deskripsi: 'Finance Department - Manage payroll & budgets',
+        level: 2,
+      },
+    }),
+    prisma.refRole.create({
+      data: {
+        namaRole: 'manager',
+        deskripsi: 'Department manager - Manage team & approvals',
         level: 3,
       },
     }),
-    prisma.refRole.upsert({
-      where: { namaRole: 'Karyawan' },
-      update: {},
-      create: {
-        namaRole: 'Karyawan',
-        deskripsi: 'Karyawan biasa',
+    prisma.refRole.create({
+      data: {
+        namaRole: 'karyawan',
+        deskripsi: 'Regular employee',
         level: 4,
       },
     }),
   ]);
 
-  console.log(`✅ Created ${roles.length} roles`);
+  console.log('✅ Roles created:', roles.length);
+  console.log('\n📋 Role IDs:');
+  console.log('┌────┬─────────────┬───────┐');
+  console.log('│ ID │ Role Name   │ Level │');
+  console.log('├────┼─────────────┼───────┤');
+  roles.forEach((role) => {
+    console.log(
+      `│ ${String(role.idRole).padEnd(2)} │ ${role.namaRole.padEnd(11)} │ ${String(role.level).padEnd(5)} │`,
+    );
+  });
+  console.log('└────┴─────────────┴───────┘\n');
 
-  // 2. Seed Permissions
-  console.log('📝 Seeding Permissions...');
-  const permissions = await Promise.all([
-    // User Management
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'user.create' },
-      update: {},
-      create: {
-        namaPermission: 'user.create',
-        deskripsi: 'Membuat user baru',
-      },
-    }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'user.read' },
-      update: {},
-      create: {
-        namaPermission: 'user.read',
-        deskripsi: 'Melihat data user',
-      },
-    }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'user.update' },
-      update: {},
-      create: {
-        namaPermission: 'user.update',
-        deskripsi: 'Mengupdate data user',
-      },
-    }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'user.delete' },
-      update: {},
-      create: {
-        namaPermission: 'user.delete',
-        deskripsi: 'Menghapus user',
-      },
-    }),
+  // 3. SEED PERMISSIONS
+  console.log('📝 Creating permissions...');
 
-    // Employee Management
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'employee.create' },
-      update: {},
-      create: {
-        namaPermission: 'employee.create',
-        deskripsi: 'Membuat data karyawan',
+  const permissions = await prisma.$transaction([
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'manage_karyawan',
+        deskripsi: 'Create, edit, delete karyawan',
       },
     }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'employee.read' },
-      update: {},
-      create: {
-        namaPermission: 'employee.read',
-        deskripsi: 'Melihat data karyawan',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'view_karyawan',
+        deskripsi: 'View karyawan data',
       },
     }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'employee.update' },
-      update: {},
-      create: {
-        namaPermission: 'employee.update',
-        deskripsi: 'Mengupdate data karyawan',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'manage_jabatan',
+        deskripsi: 'Manage positions',
       },
     }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'employee.delete' },
-      update: {},
-      create: {
-        namaPermission: 'employee.delete',
-        deskripsi: 'Menghapus data karyawan',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'manage_departemen',
+        deskripsi: 'Manage departments',
       },
     }),
-
-    // Department Management
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'department.manage' },
-      update: {},
-      create: {
-        namaPermission: 'department.manage',
-        deskripsi: 'Mengelola departemen',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'view_salary',
+        deskripsi: 'View salary information',
       },
     }),
-
-    // Attendance
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'attendance.manage' },
-      update: {},
-      create: {
-        namaPermission: 'attendance.manage',
-        deskripsi: 'Mengelola absensi',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'approve_leave',
+        deskripsi: 'Approve leave requests',
       },
     }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'attendance.view' },
-      update: {},
-      create: {
-        namaPermission: 'attendance.view',
-        deskripsi: 'Melihat absensi',
-      },
-    }),
-
-    // Payroll
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'payroll.manage' },
-      update: {},
-      create: {
-        namaPermission: 'payroll.manage',
-        deskripsi: 'Mengelola penggajian',
-      },
-    }),
-    prisma.refPermission.upsert({
-      where: { namaPermission: 'payroll.view' },
-      update: {},
-      create: {
-        namaPermission: 'payroll.view',
-        deskripsi: 'Melihat data gaji',
+    prisma.refPermission.create({
+      data: {
+        namaPermission: 'view_reports',
+        deskripsi: 'View reports',
       },
     }),
   ]);
 
-  console.log(`✅ Created ${permissions.length} permissions`);
+  console.log('✅ Permissions created:', permissions.length, '\n');
 
-  // 3. Assign Permissions to Roles
-  console.log('📝 Assigning Permissions to Roles...');
+  // 4. MAP ROLE-PERMISSION
+  console.log('📝 Mapping role permissions...');
 
-  const superAdmin = roles.find((r) => r.namaRole === 'Super Admin');
-  const adminHRD = roles.find((r) => r.namaRole === 'Admin HRD');
-  const finance = roles.find((r) => r.namaRole === 'Finance');
-  const manager = roles.find((r) => r.namaRole === 'Manager');
-  const karyawan = roles.find((r) => r.namaRole === 'Karyawan');
+  const superadminRole = roles.find((r) => r.namaRole === 'superadmin')!;
+  const hrdRole = roles.find((r) => r.namaRole === 'hrd')!;
+  const adminRole = roles.find((r) => r.namaRole === 'admin')!;
+  const financeRole = roles.find((r) => r.namaRole === 'finance')!;
+  const managerRole = roles.find((r) => r.namaRole === 'manager')!;
 
-  // Super Admin - All permissions
-  if (superAdmin) {
-    for (const permission of permissions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          idRole_idPermission: {
-            idRole: superAdmin.idRole,
-            idPermission: permission.idPermission,
-          },
-        },
-        update: {},
-        create: {
-          idRole: superAdmin.idRole,
-          idPermission: permission.idPermission,
-        },
-      });
-    }
-    console.log(`✅ Assigned all permissions to Super Admin`);
+  // Superadmin: ALL permissions
+  for (const permission of permissions) {
+    await prisma.rolePermission.create({
+      data: {
+        idRole: superadminRole.idRole,
+        idPermission: permission.idPermission,
+      },
+    });
   }
 
-  // Admin HRD - User & Employee management
-  if (adminHRD) {
-    const hrdPermissions = permissions.filter((p) =>
-      ['user.', 'employee.', 'department.', 'attendance.'].some((prefix) =>
-        p.namaPermission.startsWith(prefix),
-      ),
-    );
-    for (const permission of hrdPermissions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          idRole_idPermission: {
-            idRole: adminHRD.idRole,
-            idPermission: permission.idPermission,
-          },
-        },
-        update: {},
-        create: {
-          idRole: adminHRD.idRole,
-          idPermission: permission.idPermission,
+  // HRD: manage karyawan, jabatan, departemen, view salary
+  const hrdPerms = [
+    'manage_karyawan',
+    'view_karyawan',
+    'manage_jabatan',
+    'manage_departemen',
+    'view_salary',
+  ];
+  for (const permName of hrdPerms) {
+    const perm = permissions.find((p) => p.namaPermission === permName);
+    if (perm) {
+      await prisma.rolePermission.create({
+        data: {
+          idRole: hrdRole.idRole,
+          idPermission: perm.idPermission,
         },
       });
     }
+  }
+
+  // Admin: manage departemen, jabatan, view karyawan
+  const adminPerms = ['manage_departemen', 'manage_jabatan', 'view_karyawan'];
+  for (const permName of adminPerms) {
+    const perm = permissions.find((p) => p.namaPermission === permName);
+    if (perm) {
+      await prisma.rolePermission.create({
+        data: {
+          idRole: adminRole.idRole,
+          idPermission: perm.idPermission,
+        },
+      });
+    }
+  }
+
+  // Finance: view salary, view reports
+  const financePerms = ['view_salary', 'view_reports'];
+  for (const permName of financePerms) {
+    const perm = permissions.find((p) => p.namaPermission === permName);
+    if (perm) {
+      await prisma.rolePermission.create({
+        data: {
+          idRole: financeRole.idRole,
+          idPermission: perm.idPermission,
+        },
+      });
+    }
+  }
+
+  // Manager: view karyawan, approve leave
+  const managerPerms = ['view_karyawan', 'approve_leave'];
+  for (const permName of managerPerms) {
+    const perm = permissions.find((p) => p.namaPermission === permName);
+    if (perm) {
+      await prisma.rolePermission.create({
+        data: {
+          idRole: managerRole.idRole,
+          idPermission: perm.idPermission,
+        },
+      });
+    }
+  }
+
+  console.log(' Role permissions mapped\n');
+
+  // 5. SEED SAMPLE DEPARTMENTS
+  console.log(' Creating sample departments...');
+
+  const karyawanRole = roles.find((r) => r.namaRole === 'karyawan')!;
+
+  const departments = await prisma.$transaction([
+    prisma.refDepartemen.create({
+      data: {
+        namaDepartemen: 'IT',
+        idRoleDefault: adminRole.idRole,
+        deskripsi: 'Information Technology - System development & maintenance',
+      },
+    }),
+    prisma.refDepartemen.create({
+      data: {
+        namaDepartemen: 'Finance',
+        idRoleDefault: financeRole.idRole,
+        deskripsi: 'Finance & Accounting - Budget & payroll management',
+      },
+    }),
+    prisma.refDepartemen.create({
+      data: {
+        namaDepartemen: 'Marketing',
+        idRoleDefault: karyawanRole.idRole,
+        deskripsi: 'Marketing & Communications',
+      },
+    }),
+    prisma.refDepartemen.create({
+      data: {
+        namaDepartemen: 'Sales',
+        idRoleDefault: karyawanRole.idRole,
+        deskripsi: 'Sales & Business Development',
+      },
+    }),
+  ]);
+
+  console.log('✅ Departments created:', departments.length);
+  console.log('\n📋 Departments:');
+  departments.forEach((dept) => {
+    const role = roles.find((r) => r.idRole === dept.idRoleDefault);
     console.log(
-      `✅ Assigned ${hrdPermissions.length} permissions to Admin HRD`,
+      `   - ${dept.namaDepartemen} (Default Role: ${role?.namaRole})`,
     );
-  }
+  });
 
-  // Finance - Payroll management
-  if (finance) {
-    const financePermissions = permissions.filter((p) =>
-      p.namaPermission.startsWith('payroll.'),
-    );
-    for (const permission of financePermissions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          idRole_idPermission: {
-            idRole: finance.idRole,
-            idPermission: permission.idPermission,
-          },
-        },
-        update: {},
-        create: {
-          idRole: finance.idRole,
-          idPermission: permission.idPermission,
-        },
-      });
-    }
-    console.log(
-      `✅ Assigned ${financePermissions.length} permissions to Finance`,
-    );
-  }
+  // ============================================
+  // 6. SEED SAMPLE JABATAN
+  // ============================================
+  console.log('\n📝 Creating sample positions...');
 
-  // Manager - View permissions
-  if (manager) {
-    const managerPermissions = permissions.filter(
-      (p) =>
-        p.namaPermission.includes('.read') ||
-        p.namaPermission.includes('.view'),
-    );
-    for (const permission of managerPermissions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          idRole_idPermission: {
-            idRole: manager.idRole,
-            idPermission: permission.idPermission,
-          },
-        },
-        update: {},
-        create: {
-          idRole: manager.idRole,
-          idPermission: permission.idPermission,
-        },
-      });
-    }
-    console.log(
-      `✅ Assigned ${managerPermissions.length} permissions to Manager`,
-    );
-  }
+  const itDept = departments.find((d) => d.namaDepartemen === 'IT')!;
+  const financeDept = departments.find((d) => d.namaDepartemen === 'Finance')!;
+  const marketingDept = departments.find(
+    (d) => d.namaDepartemen === 'Marketing',
+  )!;
 
-  // Karyawan - Basic view permissions
-  if (karyawan) {
-    const karyawanPermissions = permissions.filter((p) =>
-      ['attendance.view', 'payroll.view'].includes(p.namaPermission),
-    );
-    for (const permission of karyawanPermissions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          idRole_idPermission: {
-            idRole: karyawan.idRole,
-            idPermission: permission.idPermission,
-          },
-        },
-        update: {},
-        create: {
-          idRole: karyawan.idRole,
-          idPermission: permission.idPermission,
-        },
-      });
-    }
-    console.log(
-      `✅ Assigned ${karyawanPermissions.length} permissions to Karyawan`,
-    );
-  }
+  const jabatan = await prisma.$transaction([
+    // IT Department
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'IT Manager',
+        idDepartemen: itDept.idDepartemen,
+        deskripsiJabatan: 'Lead IT department & manage infrastructure',
+        status: true,
+      },
+    }),
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'Backend Developer',
+        idDepartemen: itDept.idDepartemen,
+        deskripsiJabatan: 'Develop server-side applications',
+        status: true,
+      },
+    }),
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'Frontend Developer',
+        idDepartemen: itDept.idDepartemen,
+        deskripsiJabatan: 'Develop user interfaces',
+        status: true,
+      },
+    }),
+    // Finance Department
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'Finance Manager',
+        idDepartemen: financeDept.idDepartemen,
+        deskripsiJabatan: 'Lead finance operations',
+        status: true,
+      },
+    }),
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'Accountant',
+        idDepartemen: financeDept.idDepartemen,
+        deskripsiJabatan: 'Handle bookkeeping & financial records',
+        status: true,
+      },
+    }),
+    // Marketing Department
+    prisma.refJabatan.create({
+      data: {
+        namaJabatan: 'Marketing Manager',
+        idDepartemen: marketingDept.idDepartemen,
+        deskripsiJabatan: 'Lead marketing campaigns',
+        status: true,
+      },
+    }),
+  ]);
 
-  console.log('🎉 Seed completed successfully!');
+  console.log('✅ Positions created:', jabatan.length);
+
+  console.log('\n🎉 Seed completed successfully!\n');
+  console.log('═══════════════════════════════════════');
+  console.log('Next steps:');
+  console.log('1. Start your NestJS app: npm run start:dev');
+  console.log('2. Test department endpoints');
+  console.log('3. Test jabatan endpoints');
+  console.log('═══════════════════════════════════════\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

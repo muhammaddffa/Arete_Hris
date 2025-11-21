@@ -12,6 +12,10 @@ datasource db {
 }
 
 
+// ============================================
+// RBAC - ROLE & PERMISSION (INT - Master Data)
+// ============================================
+
 model RefRole {
   idRole    Int      @id @default(autoincrement()) @map("id_role")
   namaRole  String   @unique @map("nama_role") @db.VarChar(50)
@@ -53,37 +57,38 @@ model RolePermission {
 }
 
 // ============================================
-// MASTER DATA - DEPARTEMEN, JABATAN (UUID)
+// MASTER DATA - DEPARTEMEN & JABATAN (UUID)
 // ============================================
 
 model RefDepartemen {
   idDepartemen   String   @id @default(uuid()) @map("id_departemen") @db.Uuid
-  namaDepartemen String   @map("nama_departemen") @db.VarChar(100)
-  idRoleDefault  Int      @map("id_role_default") // Int karena relasi ke RefRole
+  namaDepartemen String   @unique @map("nama_departemen") @db.VarChar(100)
+  idRoleDefault  Int      @map("id_role_default") // INT - FK ke RefRole
   deskripsi      String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  roleDefault RefRole       @relation(fields: [idRoleDefault], references: [idRole])
+  roleDefault RefRole      @relation(fields: [idRoleDefault], references: [idRole])
   jabatan     RefJabatan[]
 
+  @@index([idRoleDefault])
   @@map("refdepartemen")
 }
 
 model RefJabatan {
-  idJabatan        String   @id @default(uuid()) @map("id_jabatan") @db.Uuid
-  namaJabatan      String   @map("nama_jabatan") @db.VarChar(100)
-  idDepartemen     String   @map("id_departemen") @db.Uuid
-  idAtasan         String?  @map("id_atasan") @db.Uuid // FK ke RefKaryawan
-  deskripsiJabatan String?  @map("deskripsi_jabatan") @db.Text
-  status           Boolean  @default(true)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  idJabatan        String        @id @default(uuid()) @map("id_jabatan") @db.Uuid
+  namaJabatan      String        @map("nama_jabatan") @db.VarChar(100)
+  idDepartemen     String        @map("id_departemen") @db.Uuid
+  idAtasan         String?       @map("id_atasan") @db.Uuid // Self-reference ke karyawan
+  deskripsiJabatan String?       @map("deskripsi_jabatan") @db.Text
+  status           Boolean       @default(true)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  departemen RefDepartemen @relation(fields: [idDepartemen], references: [idDepartemen])
-  atasan     RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan])
+  departemen RefDepartemen @relation(fields: [idDepartemen], references: [idDepartemen], onDelete: Restrict)
+  atasan     RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
   karyawan   RefKaryawan[] @relation("KaryawanJabatan")
 
   @@index([idDepartemen])
@@ -117,7 +122,7 @@ model RefKaryawan {
   idKaryawan       String            @id @default(uuid()) @map("id_karyawan") @db.Uuid
   nik              String?           @unique @db.VarChar(20)
   npwp             String?           @db.VarChar(30)
-  skck             String?           @db.VarChar(255)
+  skck             String?           @db.VarChar(255) // File path
   suratKesehatan   String?           @map("surat_kesehatan") @db.VarChar(255)
   cv               String?           @db.VarChar(255)
   nama             String            @db.VarChar(100)
@@ -141,18 +146,19 @@ model RefKaryawan {
   updatedAt        DateTime          @updatedAt @map("updated_at")
 
   // Relations
-  jabatan       RefJabatan   @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan])
+  jabatan       RefJabatan   @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan], onDelete: Restrict)
   jabatanAtasan RefJabatan[] @relation("AtasanJabatan")
   user          User?
 
   @@index([idJabatan])
   @@index([nik])
   @@index([status])
+  @@index([statusKeaktifan])
   @@map("refkaryawan")
 }
 
 // ============================================
-// USER & AUTHENTICATION (UUID)
+// USER & AUTHENTICATION (UUID) - UNTUK NANTI
 // ============================================
 
 model User {
@@ -183,7 +189,7 @@ model User {
 
 model UserRole {
   idUser String @map("id_user") @db.Uuid
-  idRole Int    @map("id_role") // Int karena relasi ke RefRole
+  idRole Int    @map("id_role") // INT - FK ke RefRole
 
   // Relations
   user User    @relation(fields: [idUser], references: [idUser], onDelete: Cascade)
