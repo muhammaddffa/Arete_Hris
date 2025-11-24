@@ -57,4 +57,21 @@ export const RESPONSE_MESSAGES = {
     NOT_FOUND: 'Data tidak ditemukan',
     BAD_REQUEST: 'Request tidak valid',
   },
+
+  KARYAWAN: {
+    CREATED: 'Karyawan berhasil dibuat',
+    UPDATED: 'Karyawan berhasil diupdate',
+    DELETED: 'Karyawan berhasil dihapus',
+    FOUND: 'Data karyawan ditemukan',
+    LIST: 'Daftar karyawan berhasil diambil',
+    NOT_FOUND: 'Karyawan tidak ditemukan',
+    NIK_EXISTS: 'NIK sudah terdaftar',
+    EMAIL_EXISTS: 'Email sudah terdaftar',
+    UNDER_AGE: 'Karyawan harus berusia minimal 17 tahun',
+    IS_ATASAN: 'Tidak dapat menghapus karyawan yang menjadi atasan',
+    APPROVED: 'Candidate berhasil di-approve',
+    REJECTED: 'Candidate berhasil di-reject',
+    RESIGN: 'Karyawan berhasil resign',
+    INVALID_STATUS: 'Status karyawan tidak valid untuk operasi ini',
+  },
 };
