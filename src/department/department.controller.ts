@@ -22,12 +22,15 @@ import { DepartmentService } from './department.service';
 import {
   CreateDepartmentDto,
   UpdateDepartmentDto,
+  QueryDepartmentDto,
   DepartmentResponseDto,
+  PaginatedDepartmentResponseDto,
+  DepartmentWithStatsDto,
 } from './dto/department.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
 
-@ApiTags('Department')
+@ApiTags('Departemen')
 @Controller('department')
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) {}
@@ -42,29 +45,34 @@ export class DepartmentController {
   })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   async create(@Body() createDepartmentDto: CreateDepartmentDto) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = await this.departmentService.create(createDepartmentDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.DEPARTMENT.CREATED);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all departments' })
+  @ApiOperation({ summary: 'Get all departments with pagination and filters' })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'includeRelations', required: false, type: Boolean })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiQuery({
-    name: 'includeRelations',
+    name: 'sortBy',
     required: false,
-    type: Boolean,
-    description: 'Include role default dan count jabatan',
+    enum: ['namaDepartemen', 'createdAt'],
   })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   @ApiResponse({
     status: 200,
-    description: 'List of departments',
-    type: [DepartmentResponseDto],
+    description: 'List of departments with pagination',
+    type: PaginatedDepartmentResponseDto,
   })
-  async findAll(@Query('includeRelations') includeRelations?: string) {
-    const include = includeRelations === 'true';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const data = await this.departmentService.findAll(include);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.LIST);
+  async findAll(@Query() query: QueryDepartmentDto) {
+    const result = await this.departmentService.findAll(query);
+    return ResponseUtil.successWithMeta(
+      result.data,
+      result.meta,
+      RESPONSE_MESSAGES.DEPARTMENT.LIST,
+    );
   }
 
   @Get(':id')
@@ -73,6 +81,7 @@ export class DepartmentController {
     name: 'id',
     description: 'Department ID (UUID)',
     format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: 200,
@@ -81,7 +90,6 @@ export class DepartmentController {
   })
   @ApiResponse({ status: 404, description: 'Department not found' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = await this.departmentService.findOne(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.FOUND);
   }
@@ -92,25 +100,25 @@ export class DepartmentController {
     name: 'id',
     description: 'Department ID (UUID)',
     format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Department statistics including total jabatan and karyawan aktif',
+    description: 'Department statistics',
+    type: DepartmentWithStatsDto,
   })
   @ApiResponse({ status: 404, description: 'Department not found' })
   async getDepartmentStats(@Param('id', ParseUUIDPipe) id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = await this.departmentService.getDepartmentStats(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.FOUND);
+    return ResponseUtil.success(data, 'Statistik departemen berhasil diambil');
   }
-
   @Patch(':id')
   @ApiOperation({ summary: 'Update department' })
   @ApiParam({
     name: 'id',
     description: 'Department ID (UUID)',
     format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: 200,
@@ -123,7 +131,6 @@ export class DepartmentController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDepartmentDto: UpdateDepartmentDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = await this.departmentService.update(id, updateDepartmentDto);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.UPDATED);
   }
@@ -135,6 +142,7 @@ export class DepartmentController {
     name: 'id',
     description: 'Department ID (UUID)',
     format: 'uuid',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @ApiResponse({
     status: 200,
@@ -149,7 +157,6 @@ export class DepartmentController {
     description: 'Cannot delete department with existing jabatan',
   })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = await this.departmentService.remove(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.DELETED);
   }

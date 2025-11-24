@@ -1,11 +1,16 @@
-// src/department/department.service.ts
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateDepartmentDto, UpdateDepartmentDto } from './dto/department.dto';
+import {
+  CreateDepartmentDto,
+  UpdateDepartmentDto,
+  QueryDepartmentDto,
+} from './dto/department.dto';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
 
 @Injectable()
@@ -14,7 +19,6 @@ export class DepartmentService {
 
   async create(createDepartmentDto: CreateDepartmentDto) {
     // Validasi apakah role exist
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const roleExists = await this.prisma.refRole.findUnique({
       where: { idRole: createDepartmentDto.idRoleDefault },
     });
@@ -24,7 +28,6 @@ export class DepartmentService {
     }
 
     // Check duplicate
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const exists = await this.prisma.refDepartemen.findFirst({
       where: { namaDepartemen: createDepartmentDto.namaDepartemen },
     });
@@ -35,7 +38,6 @@ export class DepartmentService {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return this.prisma.refDepartemen.create({
       data: createDepartmentDto,
       include: {
@@ -50,34 +52,69 @@ export class DepartmentService {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async findAll(includeRelations = false) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return this.prisma.refDepartemen.findMany({
-      include: includeRelations
-        ? {
-            roleDefault: {
-              select: {
-                idRole: true,
-                namaRole: true,
-                level: true,
+  async findAll(query: QueryDepartmentDto) {
+    const {
+      search,
+      includeRelations = false,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
+    // Build where clause
+    const where: any = {};
+
+    // Search filter
+    if (search) {
+      where.namaDepartemen = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    // Pagination
+    const skip = (page - 1) * limit;
+
+    // Execute query with transaction for consistency
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.refDepartemen.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: includeRelations
+          ? {
+              roleDefault: {
+                select: {
+                  idRole: true,
+                  namaRole: true,
+                  level: true,
+                },
               },
-            },
-            _count: {
-              select: {
-                jabatan: true,
+              _count: {
+                select: {
+                  jabatan: true,
+                },
               },
-            },
-          }
-        : undefined,
-      orderBy: {
-        createdAt: 'desc',
+            }
+          : undefined,
+      }),
+      this.prisma.refDepartemen.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   }
 
   async findOne(id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const departemen = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen: id },
       include: {
@@ -101,7 +138,6 @@ export class DepartmentService {
       throw new NotFoundException(RESPONSE_MESSAGES.DEPARTMENT.NOT_FOUND);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return departemen;
   }
 
@@ -111,7 +147,6 @@ export class DepartmentService {
 
     // Validasi role jika diupdate
     if (updateDepartmentDto.idRoleDefault) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const roleExists = await this.prisma.refRole.findUnique({
         where: { idRole: updateDepartmentDto.idRoleDefault },
       });
@@ -123,7 +158,6 @@ export class DepartmentService {
 
     // Check duplicate name
     if (updateDepartmentDto.namaDepartemen) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const exists = await this.prisma.refDepartemen.findFirst({
         where: {
           namaDepartemen: updateDepartmentDto.namaDepartemen,
@@ -138,7 +172,6 @@ export class DepartmentService {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return this.prisma.refDepartemen.update({
       where: { idDepartemen: id },
       data: updateDepartmentDto,
@@ -158,7 +191,6 @@ export class DepartmentService {
     await this.findOne(id);
 
     // Cek apakah ada jabatan yang terkait
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const jabatanCount = await this.prisma.refJabatan.count({
       where: { idDepartemen: id },
     });
@@ -169,23 +201,18 @@ export class DepartmentService {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return this.prisma.refDepartemen.delete({
       where: { idDepartemen: id },
     });
   }
 
   async getDepartmentStats(id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const departemen = await this.findOne(id);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [jabatanCount, karyawanCount] = await Promise.all([
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.prisma.refJabatan.count({
         where: { idDepartemen: id },
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.prisma.refKaryawan.count({
         where: {
           jabatan: {
@@ -196,13 +223,10 @@ export class DepartmentService {
       }),
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return {
       ...departemen,
       stats: {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         totalJabatan: jabatanCount,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         totalKaryawanAktif: karyawanCount,
       },
     };

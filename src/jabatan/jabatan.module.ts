@@ -1,4 +1,3 @@
-// src/jabatan/jabatan.module.ts
 import { Module } from '@nestjs/common';
 import { JabatanService } from './jabatan.service';
 import { JabatanController } from './jabatan.controller';
