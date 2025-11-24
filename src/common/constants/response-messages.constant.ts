@@ -10,6 +10,17 @@ export const RESPONSE_MESSAGES = {
     HAS_JABATAN: 'Departemen tidak dapat dihapus karena masih memiliki jabatan',
   },
 
+  JABATAN: {
+    CREATED: 'Jabatan berhasil dibuat',
+    UPDATED: 'Jabatan berhasil diupdate',
+    DELETED: 'Jabatan berhasil dihapus',
+    FOUND: 'Jabatan ditemukan',
+    LIST: 'Daftar jabatan berhasil diambil',
+    NOT_FOUND: 'Jabatan tidak ditemukan',
+    ALREADY_EXISTS: 'Jabatan dengan nama tersebut sudah ada di departemen ini',
+    HAS_KARYAWAN: 'Jabatan tidak dapat dihapus karena masih memiliki karyawan',
+  },
+
   ROLE: {
     CREATED: 'Role berhasil dibuat',
     UPDATED: 'Role berhasil diupdate',
