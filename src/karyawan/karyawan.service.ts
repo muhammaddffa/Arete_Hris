@@ -23,10 +23,6 @@ export class KaryawanService {
   ) {
     this.transformer = new KaryawanTransformer(configService);
   }
-
-  // ============================================
-  // HELPER: Convert date string to Date object
-  // ============================================
   private parseDate(dateString: string | undefined): Date | undefined {
     if (!dateString) return undefined;
 
@@ -38,10 +34,6 @@ export class KaryawanService {
 
     return date;
   }
-
-  // ============================================
-  // HELPER: Calculate age
-  // ============================================
   private calculateAge(birthDate: Date): number {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -56,10 +48,6 @@ export class KaryawanService {
 
     return age;
   }
-
-  // ============================================
-  // CREATE
-  // ============================================
   async create(createKaryawanDto: CreateKaryawanDto) {
     // 1. Validate jabatan
     const jabatan = await this.prisma.refJabatan.findUnique({
@@ -146,9 +134,6 @@ export class KaryawanService {
     return this.transformer.transformCreateUpdate(karyawan);
   }
 
-  // ============================================
-  // FIND ALL WITH FILTERS
-  // ============================================
   async findAll(filterDto: FilterKaryawanDto) {
     const {
       status,
@@ -237,9 +222,6 @@ export class KaryawanService {
     };
   }
 
-  // ============================================
-  // FIND ONE
-  // ============================================
   async findOne(id: string, includeUser = false) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: id },
