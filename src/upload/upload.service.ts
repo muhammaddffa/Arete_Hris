@@ -1,125 +1,112 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import { unlink, access } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { UploadResponseDto } from './upload.config';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  CloudinaryService,
+  CloudinaryUploadResult,
+} from './cloudinary.service';
+import { CloudinaryUploadResponseDto } from './dto/cloudinary-response.dto';
 
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
 
+  constructor(private cloudinaryService: CloudinaryService) {}
+
   /**
-   * Delete a single file
+   * Upload single file to Cloudinary
    */
-  async deleteFile(filepath: string): Promise<boolean> {
-    try {
-      // Handle both relative and absolute paths
-      const fullPath = filepath.startsWith('/')
-        ? filepath
-        : join(process.cwd(), filepath);
+  async uploadFile(file: Express.Multer.File): Promise<CloudinaryUploadResult> {
+    // Validate file size
+    this.cloudinaryService.validateFileSize(file, file.fieldname);
 
-      // Check if file exists
-      if (existsSync(fullPath)) {
-        await unlink(fullPath);
-        this.logger.log(`File deleted successfully: ${filepath}`);
-        return true;
-      }
-
-      this.logger.warn(`File not found: ${filepath}`);
-      return false;
-    } catch (error) {
-      this.logger.error(`Error deleting file: ${filepath}`, error);
-      return false;
-    }
+    // Upload to Cloudinary
+    return this.cloudinaryService.uploadFile(file);
   }
 
-  async deleteMultipleFiles(filepaths: string[]): Promise<{
+  /**
+   * Upload multiple files to Cloudinary
+   */
+  async uploadMultipleFiles(
+    files: Express.Multer.File[],
+  ): Promise<CloudinaryUploadResult[]> {
+    // Validate all files
+    files.forEach((file) => {
+      this.cloudinaryService.validateFileSize(file, file.fieldname);
+    });
+
+    // Upload all to Cloudinary
+    return this.cloudinaryService.uploadMultipleFiles(files);
+  }
+
+  /**
+   * Delete file from Cloudinary
+   * @param publicIdOrUrl - Can be public_id or full Cloudinary URL
+   */
+  async deleteFile(publicIdOrUrl: string): Promise<boolean> {
+    // Extract public_id if URL is provided
+    const publicId = publicIdOrUrl.includes('cloudinary.com')
+      ? this.cloudinaryService.extractPublicId(publicIdOrUrl)
+      : publicIdOrUrl;
+
+    if (!publicId) {
+      this.logger.warn(`Invalid Cloudinary URL or public_id: ${publicIdOrUrl}`);
+      return false;
+    }
+
+    return this.cloudinaryService.deleteFile(publicId);
+  }
+
+  /**
+   * Delete multiple files from Cloudinary
+   */
+  async deleteMultipleFiles(publicIdsOrUrls: string[]): Promise<{
     success: string[];
     failed: string[];
   }> {
-    const success: string[] = [];
-    const failed: string[] = [];
+    const publicIds = publicIdsOrUrls
+      .map((item) =>
+        item.includes('cloudinary.com')
+          ? this.cloudinaryService.extractPublicId(item)
+          : item,
+      )
+      .filter(Boolean) as string[];
 
-    await Promise.all(
-      filepaths.map(async (filepath) => {
-        const deleted = await this.deleteFile(filepath);
-        if (deleted) {
-          success.push(filepath);
-        } else {
-          failed.push(filepath);
-        }
-      }),
-    );
-
-    this.logger.log(
-      `Deleted ${success.length}/${filepaths.length} files successfully`,
-    );
-
-    return { success, failed };
+    return this.cloudinaryService.deleteMultipleFiles(publicIds);
   }
 
   /**
-   * Validate file size based on field name
+   * Get optimized image URL
    */
-  validateFileSize(file: Express.Multer.File, fieldname: string): void {
-    const limits: Record<string, number> = {
-      pasfoto: 2 * 1024 * 1024, // 2MB
-      photo: 2 * 1024 * 1024, // 2MB
-      cv: 10 * 1024 * 1024, // 10MB
-      nik: 5 * 1024 * 1024, // 5MB
-      nik_file: 5 * 1024 * 1024, // 5MB
-      npwp: 5 * 1024 * 1024, // 5MB
-      npwp_file: 5 * 1024 * 1024, // 5MB
-      skck: 5 * 1024 * 1024, // 5MB
-      suratKesehatan: 5 * 1024 * 1024, // 5MB
-      default: 10 * 1024 * 1024, // 10MB
-    };
-
-    const maxSize = limits[fieldname] || limits.default;
-
-    if (file.size > maxSize) {
-      throw new BadRequestException(
-        `File ${fieldname} terlalu besar. Maksimal ${maxSize / (1024 * 1024)}MB`,
-      );
-    }
+  getOptimizedImageUrl(
+    publicId: string,
+    options?: {
+      width?: number;
+      height?: number;
+      quality?: number | 'auto';
+    },
+  ): string {
+    return this.cloudinaryService.getOptimizedImageUrl(publicId, options);
   }
 
   /**
-   * Format file response for API
+   * Format Cloudinary response for API
    */
-  formatFileResponse(file: Express.Multer.File): UploadResponseDto {
+  formatCloudinaryResponse(
+    file: Express.Multer.File,
+    cloudinaryResult: CloudinaryUploadResult,
+  ): CloudinaryUploadResponseDto {
     return {
       fieldname: file.fieldname,
       originalname: file.originalname,
-      filename: file.filename,
-      path: file.path.replace(/\\/g, '/'), // Normalize path for Windows
-      size: file.size,
-      mimetype: file.mimetype,
+      url: cloudinaryResult.url,
+      secureUrl: cloudinaryResult.secureUrl,
+      publicId: cloudinaryResult.publicId,
+      format: cloudinaryResult.format,
+      bytes: cloudinaryResult.bytes,
+      width: cloudinaryResult.width,
+      height: cloudinaryResult.height,
+      resourceType: cloudinaryResult.resourceType,
     };
-  }
-
-  /**
-   * Check if file exists
-   */
-  async fileExists(filepath: string): Promise<boolean> {
-    try {
-      const fullPath = filepath.startsWith('/')
-        ? filepath
-        : join(process.cwd(), filepath);
-
-      await access(fullPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get file URL (for serving static files)
-   */
-  getFileUrl(filepath: string, baseUrl = ''): string {
-    // Remove 'uploads/' prefix if exists for consistent URL
-    const cleanPath = filepath.replace(/^\.?\/uploads\//, '');
-    return `${baseUrl}/uploads/${cleanPath}`;
   }
 }
