@@ -96,10 +96,6 @@ model RefJabatan {
   @@map("refjabatan")
 }
 
-// ============================================
-// KARYAWAN (UUID)
-// ============================================
-
 enum StatusKaryawan {
   aktif
   rejected
@@ -116,45 +112,6 @@ enum StatusPernikahan {
   belum_menikah
   menikah
   cerai
-}
-
-model RefKaryawan {
-  idKaryawan       String            @id @default(uuid()) @map("id_karyawan") @db.Uuid
-  nik              String?           @unique @db.VarChar(20)
-  npwp             String?           @db.VarChar(30)
-  skck             String?           @db.VarChar(255) // File path
-  suratKesehatan   String?           @map("surat_kesehatan") @db.VarChar(255)
-  cv               String?           @db.VarChar(255)
-  nama             String            @db.VarChar(100)
-  tempatLahir      String            @map("tempat_lahir") @db.VarChar(100)
-  tanggalLahir     DateTime          @map("tanggal_lahir") @db.Date
-  jenisKelamin     JenisKelamin      @map("jenis_kelamin")
-  statusPernikahan StatusPernikahan  @map("status_pernikahan")
-  pasfoto          String?           @db.VarChar(255)
-  agama            String            @db.VarChar(20)
-  noHpPribadi      String            @map("no_hp_pribadi") @db.VarChar(20)
-  email            String?           @db.VarChar(100)
-  alamat           String?           @db.Text
-  idJabatan        String            @map("id_jabatan") @db.Uuid
-  namaBank         String?           @map("nama_bank") @db.VarChar(50)
-  nomorRekening    String?           @map("nomor_rekening") @db.VarChar(50)
-  statusKeaktifan  Boolean           @default(true) @map("status_keaktifan")
-  tanggalMasuk     DateTime          @map("tanggal_masuk") @db.Date
-  tanggalResign    DateTime?         @map("tanggal_resign") @db.Date
-  status           StatusKaryawan    @default(candidate)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-
-  // Relations
-  jabatan       RefJabatan   @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan], onDelete: Restrict)
-  jabatanAtasan RefJabatan[] @relation("AtasanJabatan")
-  user          User?
-
-  @@index([idJabatan])
-  @@index([nik])
-  @@index([status])
-  @@index([statusKeaktifan])
-  @@map("refkaryawan")
 }
 
 // ============================================
@@ -197,4 +154,102 @@ model UserRole {
 
   @@id([idUser, idRole])
   @@map("user_role")
+}
+
+model RefKaryawan {
+  idKaryawan       String            @id @default(uuid()) @map("id_karyawan") @db.Uuid
+  nik              String?           @unique @db.VarChar(20)
+  npwp             String?           @db.VarChar(30)
+  skck             String?           @db.VarChar(255)
+  suratKesehatan   String?           @map("surat_kesehatan") @db.VarChar(255)
+  cv               String?           @db.VarChar(255)
+  nama             String            @db.VarChar(100)
+  tempatLahir      String            @map("tempat_lahir") @db.VarChar(100)
+  tanggalLahir     DateTime          @map("tanggal_lahir") @db.Date
+  jenisKelamin     JenisKelamin      @map("jenis_kelamin")
+  statusPernikahan StatusPernikahan  @map("status_pernikahan")
+  pasfoto          String?           @db.VarChar(255)
+  agama            String            @db.VarChar(20)
+  noHpPribadi      String            @map("no_hp_pribadi") @db.VarChar(20)
+  email            String?           @db.VarChar(100)
+  alamat           String?           @db.Text
+  idJabatan        String            @map("id_jabatan") @db.Uuid
+  namaBank         String?           @map("nama_bank") @db.VarChar(50)
+  nomorRekening    String?           @map("nomor_rekening") @db.VarChar(50)
+  statusKeaktifan  Boolean           @default(true) @map("status_keaktifan")
+  tanggalMasuk     DateTime          @map("tanggal_masuk") @db.Date
+  tanggalResign    DateTime?         @map("tanggal_resign") @db.Date
+  status           StatusKaryawan    @default(candidate)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  jabatan                         RefJabatan     @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan], onDelete: Restrict)
+  jabatanAtasan                   RefJabatan[]   @relation("AtasanJabatan")
+  user                            User?
+  blacklist                       RefBlacklist?
+  wawancaraSebagaiPewawancara      RefWawancara[]    @relation("PewawancaraWawancara")
+  wawancaraSebagaiPeserta         RefWawancara[]    @relation("PesertaWawancara")
+
+  @@index([idJabatan])
+  @@index([nik])
+  @@index([status])
+  @@index([statusKeaktifan])
+  @@map("refkaryawan")
+}
+
+model RefBlacklist {
+  idBlacklist String   @id @default(uuid()) @map("id_blacklist") @db.Uuid
+  idKaryawan  String   @unique @map("id_karyawan") @db.Uuid
+  nik         String   @db.VarChar(20)
+  nama        String   @db.VarChar(100)
+  pasfoto     String?  @db.VarChar(255)
+  alasan      String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+
+  @@index([idKaryawan])
+  @@index([nik])
+  @@map("refblacklist")
+}
+
+enum StatusWawancara {
+  scheduled   
+  completed   
+  cancelled   
+  rescheduled
+}
+
+enum JenisWawancara {
+  hrd
+  user
+}
+
+model RefWawancara{
+  idWawancara      String           @id @default(uuid()) @map("id_wawancara") @db.Uuid
+  idPewawancara    String           @map("id_pewawancara") @db.Uuid
+  idPeserta        String           @map("id_peserta") @db.Uuid
+  jenisWawancara   JenisWawancara   @map("jenis_wawancara") @default(hrd)
+  tanggalWawancara DateTime         @map("tanggal_wawancara") @db.Date
+  jamWawancara     String           @map("jam_wawancara") @db.VarChar(5) // Format: "HH:MM"
+  lokasi           String?          @db.VarChar(255)
+  linkOnline       String?          @map("link_online") @db.VarChar(500) // Untuk meeting online
+  catatan          String?          @db.Text
+  hasil            String?          @db.Text
+  nilaiHasil       Int?             @map("nilai_hasil") // Rating 1-10
+  status           StatusWawancara  @default(scheduled)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  pewawancara RefKaryawan @relation("PewawancaraWawancara", fields: [idPewawancara], references: [idKaryawan], onDelete: Restrict)
+  peserta     RefKaryawan @relation("PesertaWawancara", fields: [idPeserta], references: [idKaryawan], onDelete: Restrict)
+
+  @@index([idPewawancara])
+  @@index([idPeserta])
+  @@index([tanggalWawancara])
+  @@index([status])
+  @@index([jenisWawancara])
+  @@map("wawancara")
 }

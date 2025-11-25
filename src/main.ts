@@ -63,10 +63,23 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('HR Information System API')
-    .setDescription('API Documentation for HR IS')
+    .setDescription(
+      'Complete API Documentation for HR Information System\n\n' +
+        'Features:\n' +
+        '• Employee Management (Karyawan)\n' +
+        '• Department & Position Management\n' +
+        '• Blacklist Management\n' +
+        '• Interview Management (HRD & User)\n' +
+        '• File Upload with Cloudinary\n',
+    )
     .setVersion('1.0')
-    .addTag('Reference - Departemen')
-    .addBearerAuth() // Siap untuk authentication nanti
+    .addBearerAuth()
+    .addTag('Departemen', 'Department management endpoints')
+    .addTag('Jabatan', 'Position management endpoints')
+    .addTag('Karyawan', 'Employee management endpoints')
+    .addTag('Blacklist', 'Blacklist management endpoints')
+    .addTag('Wawancara', 'Interview management endpoints (HRD & User)')
+    .addTag('Upload', 'File upload to Cloudinary')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

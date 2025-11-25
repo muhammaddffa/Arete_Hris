@@ -1,4 +1,11 @@
 export const RESPONSE_MESSAGES = {
+  CREATED: 'Role berhasil dibuat',
+  UPDATED: 'Role berhasil diupdate',
+  DELETED: 'Role berhasil dihapus',
+  FOUND: 'Role ditemukan',
+  LIST: 'Daftar role berhasil diambil',
+  NOT_FOUND: 'Role tidak ditemukan',
+
   DEPARTMENT: {
     CREATED: 'Departemen berhasil dibuat',
     UPDATED: 'Departemen berhasil diupdate',
@@ -19,15 +26,6 @@ export const RESPONSE_MESSAGES = {
     NOT_FOUND: 'Jabatan tidak ditemukan',
     ALREADY_EXISTS: 'Jabatan dengan nama tersebut sudah ada di departemen ini',
     HAS_KARYAWAN: 'Jabatan tidak dapat dihapus karena masih memiliki karyawan',
-  },
-
-  ROLE: {
-    CREATED: 'Role berhasil dibuat',
-    UPDATED: 'Role berhasil diupdate',
-    DELETED: 'Role berhasil dihapus',
-    FOUND: 'Role ditemukan',
-    LIST: 'Daftar role berhasil diambil',
-    NOT_FOUND: 'Role tidak ditemukan',
   },
 
   EMPLOYEE: {
@@ -73,5 +71,50 @@ export const RESPONSE_MESSAGES = {
     REJECTED: 'Candidate berhasil di-reject',
     RESIGN: 'Karyawan berhasil resign',
     INVALID_STATUS: 'Status karyawan tidak valid untuk operasi ini',
+  },
+
+  ROLE: {
+    NOT_FOUND: 'Role tidak ditemukan',
+  },
+
+  BLACKLIST: {
+    CREATED: 'Karyawan berhasil ditambahkan ke blacklist',
+    UPDATED: 'Data blacklist berhasil diupdate',
+    DELETED: 'Berhasil dihapus dari blacklist',
+    NOT_FOUND: 'Data blacklist tidak ditemukan',
+    ALREADY_EXISTS: 'Karyawan sudah ada di blacklist',
+    LIST: 'Daftar blacklist berhasil diambil',
+    FOUND: 'Detail blacklist berhasil diambil',
+    IS_BLACKLISTED: 'Karyawan ada di blacklist',
+    NOT_BLACKLISTED: 'Karyawan tidak di blacklist',
+  },
+
+  // Wawancara
+  WAWANCARA: {
+    CREATED: 'Wawancara berhasil dijadwalkan',
+    UPDATED: 'Data wawancara berhasil diupdate',
+    DELETED: 'Data wawancara berhasil dihapus',
+    NOT_FOUND: 'Data wawancara tidak ditemukan',
+    SCHEDULE_CONFLICT: 'Jadwal bentrok dengan wawancara lain',
+    LIST: 'Daftar wawancara berhasil diambil',
+    FOUND: 'Detail wawancara berhasil diambil',
+    COMPLETED: 'Wawancara berhasil diselesaikan',
+    CANCELLED: 'Wawancara berhasil dibatalkan',
+    RESCHEDULED: 'Wawancara berhasil dijadwalkan ulang',
+    PEWAWANCARA_NOT_ACTIVE: 'Pewawancara harus karyawan aktif',
+    PESERTA_NOT_CANDIDATE: 'Peserta harus berstatus candidate',
+    CANNOT_CANCEL_COMPLETED:
+      'Wawancara yang sudah selesai tidak bisa dibatalkan',
+    ALREADY_CANCELLED: 'Wawancara sudah dibatalkan',
+    ALREADY_COMPLETED: 'Wawancara sudah diselesaikan',
+  },
+
+  // Upload
+  UPLOAD: {
+    SUCCESS: 'File berhasil diupload',
+    FAILED: 'Upload file gagal',
+    DELETED: 'File berhasil dihapus',
+    FILE_TOO_LARGE: 'Ukuran file terlalu besar',
+    INVALID_FORMAT: 'Format file tidak valid',
   },
 };
