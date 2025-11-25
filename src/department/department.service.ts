@@ -1,43 +1,55 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateDepartmentDto,
   UpdateDepartmentDto,
   QueryDepartmentDto,
+  BulkDeleteDepartmentDto,
 } from './dto/department.dto';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DepartmentService {
   constructor(private prisma: PrismaService) {}
 
+  // ==========================================
+  // CREATE
+  // ==========================================
   async create(createDepartmentDto: CreateDepartmentDto) {
-    // Validasi apakah role exist
+    // Validate role exists
     const roleExists = await this.prisma.refRole.findUnique({
       where: { idRole: createDepartmentDto.idRoleDefault },
+      select: { idRole: true }, // Minimal select for performance
     });
 
     if (!roleExists) {
       throw new BadRequestException(RESPONSE_MESSAGES.ROLE.NOT_FOUND);
     }
 
-    // Check duplicate
+    // Check duplicate name
     const exists = await this.prisma.refDepartemen.findFirst({
-      where: { namaDepartemen: createDepartmentDto.namaDepartemen },
+      where: {
+        namaDepartemen: {
+          equals: createDepartmentDto.namaDepartemen,
+          mode: 'insensitive', // Case-insensitive
+        },
+      },
+      select: { idDepartemen: true },
     });
 
     if (exists) {
-      throw new BadRequestException(
-        RESPONSE_MESSAGES.DEPARTMENT.ALREADY_EXISTS,
-      );
+      throw new ConflictException(RESPONSE_MESSAGES.DEPARTMENT.ALREADY_EXISTS);
     }
 
+    // Create department
     return this.prisma.refDepartemen.create({
       data: createDepartmentDto,
       include: {
@@ -52,9 +64,13 @@ export class DepartmentService {
     });
   }
 
+  // ==========================================
+  // FIND ALL WITH ADVANCED SEARCH
+  // ==========================================
   async findAll(query: QueryDepartmentDto) {
     const {
       search,
+      idRoleDefault,
       includeRelations = false,
       page = 1,
       limit = 10,
@@ -63,20 +79,43 @@ export class DepartmentService {
     } = query;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.RefDepartemenWhereInput = {};
 
-    // Search filter
+    // Search filter (case-insensitive)
     if (search) {
-      where.namaDepartemen = {
-        contains: search,
-        mode: 'insensitive',
-      };
+      where.OR = [
+        {
+          namaDepartemen: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          roleDefault: {
+            namaRole: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          deskripsi: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    // Filter by role
+    if (idRoleDefault) {
+      where.idRoleDefault = idRoleDefault;
     }
 
     // Pagination
     const skip = (page - 1) * limit;
 
-    // Execute query with transaction for consistency
+    // Execute query with transaction
     const [data, total] = await this.prisma.$transaction([
       this.prisma.refDepartemen.findMany({
         where,
@@ -110,10 +149,15 @@ export class DepartmentService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1,
       },
     };
   }
 
+  // ==========================================
+  // FIND ONE
+  // ==========================================
   async findOne(id: string) {
     const departemen = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen: id },
@@ -140,15 +184,15 @@ export class DepartmentService {
 
     return departemen;
   }
-
   async update(id: string, updateDepartmentDto: UpdateDepartmentDto) {
-    // Cek apakah departemen exist
+    // Check if department exists
     await this.findOne(id);
 
-    // Validasi role jika diupdate
+    // Validate role if being updated
     if (updateDepartmentDto.idRoleDefault) {
       const roleExists = await this.prisma.refRole.findUnique({
         where: { idRole: updateDepartmentDto.idRoleDefault },
+        select: { idRole: true },
       });
 
       if (!roleExists) {
@@ -156,22 +200,27 @@ export class DepartmentService {
       }
     }
 
-    // Check duplicate name
+    // Check duplicate name if being updated
     if (updateDepartmentDto.namaDepartemen) {
       const exists = await this.prisma.refDepartemen.findFirst({
         where: {
-          namaDepartemen: updateDepartmentDto.namaDepartemen,
+          namaDepartemen: {
+            equals: updateDepartmentDto.namaDepartemen,
+            mode: 'insensitive',
+          },
           NOT: { idDepartemen: id },
         },
+        select: { idDepartemen: true },
       });
 
       if (exists) {
-        throw new BadRequestException(
+        throw new ConflictException(
           RESPONSE_MESSAGES.DEPARTMENT.ALREADY_EXISTS,
         );
       }
     }
 
+    // Update department
     return this.prisma.refDepartemen.update({
       where: { idDepartemen: id },
       data: updateDepartmentDto,
@@ -188,9 +237,10 @@ export class DepartmentService {
   }
 
   async remove(id: string) {
+    // Check if department exists
     await this.findOne(id);
 
-    // Cek apakah ada jabatan yang terkait
+    // Check if department has jabatan
     const jabatanCount = await this.prisma.refJabatan.count({
       where: { idDepartemen: id },
     });
@@ -201,6 +251,7 @@ export class DepartmentService {
       );
     }
 
+    // Delete department
     return this.prisma.refDepartemen.delete({
       where: { idDepartemen: id },
     });
@@ -230,5 +281,125 @@ export class DepartmentService {
         totalKaryawanAktif: karyawanCount,
       },
     };
+  }
+
+  async autocomplete(query: string, limit: number = 10) {
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    return this.prisma.refDepartemen.findMany({
+      where: {
+        namaDepartemen: {
+          contains: query,
+          mode: 'insensitive',
+        },
+      },
+      select: {
+        idDepartemen: true,
+        namaDepartemen: true,
+        roleDefault: {
+          select: {
+            namaRole: true,
+          },
+        },
+      },
+      take: limit,
+      orderBy: {
+        namaDepartemen: 'asc',
+      },
+    });
+  }
+
+  async getAllStats() {
+    const [total, byRole] = await Promise.all([
+      this.prisma.refDepartemen.count(),
+      this.prisma.refDepartemen.groupBy({
+        by: ['idRoleDefault'],
+        _count: true,
+      }),
+    ]);
+
+    // Get role details
+    const roleIds = byRole.map((r) => r.idRoleDefault);
+    const roles = await this.prisma.refRole.findMany({
+      where: {
+        idRole: { in: roleIds },
+      },
+      select: {
+        idRole: true,
+        namaRole: true,
+      },
+    });
+
+    const byRoleWithNames = byRole.map((item) => ({
+      role: roles.find((r) => r.idRole === item.idRoleDefault),
+      count: item._count,
+    }));
+
+    return {
+      total,
+      byRole: byRoleWithNames,
+    };
+  }
+
+  async bulkDelete(dto: BulkDeleteDepartmentDto) {
+    const { ids } = dto;
+
+    // Check if departments have jabatan
+    const departmentsWithJabatan = await this.prisma.refDepartemen.findMany({
+      where: {
+        idDepartemen: { in: ids },
+      },
+      select: {
+        idDepartemen: true,
+        namaDepartemen: true,
+        _count: {
+          select: {
+            jabatan: true,
+          },
+        },
+      },
+    });
+
+    const blocked = departmentsWithJabatan.filter((d) => d._count.jabatan > 0);
+
+    if (blocked.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete ${blocked.length} department(s) with jabatan: ${blocked.map((d) => d.namaDepartemen).join(', ')}`,
+      );
+    }
+
+    // Delete departments
+    const result = await this.prisma.refDepartemen.deleteMany({
+      where: {
+        idDepartemen: { in: ids },
+      },
+    });
+
+    return {
+      deleted: result.count,
+      ids,
+    };
+  }
+
+  async checkDuplicate(name: string, excludeId?: string): Promise<boolean> {
+    const where: Prisma.RefDepartemenWhereInput = {
+      namaDepartemen: {
+        equals: name,
+        mode: 'insensitive',
+      },
+    };
+
+    if (excludeId) {
+      where.NOT = { idDepartemen: excludeId };
+    }
+
+    const exists = await this.prisma.refDepartemen.findFirst({
+      where,
+      select: { idDepartemen: true },
+    });
+
+    return !!exists;
   }
 }

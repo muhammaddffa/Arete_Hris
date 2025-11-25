@@ -12,9 +12,6 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-// ============================================
-// CREATE DTO
-// ============================================
 export class CreateDepartmentDto {
   @ApiProperty({
     description: 'Nama departemen',
@@ -45,9 +42,6 @@ export class CreateDepartmentDto {
   deskripsi?: string;
 }
 
-// ============================================
-// UPDATE DTO
-// ============================================
 export class UpdateDepartmentDto {
   @ApiPropertyOptional({
     description: 'Nama departemen',
@@ -78,9 +72,6 @@ export class UpdateDepartmentDto {
   deskripsi?: string;
 }
 
-// ============================================
-// QUERY DTO FOR PAGINATION & FILTERING
-// ============================================
 export class QueryDepartmentDto {
   @ApiPropertyOptional({
     description: 'Search by nama departemen',
@@ -91,11 +82,21 @@ export class QueryDepartmentDto {
   @IsOptional()
   search?: string;
 
+  // NEW: Filter by role
+  @ApiPropertyOptional({
+    description: 'Filter by role default ID',
+    example: 2,
+    type: Number,
+  })
+  @Type(() => Number)
+  @IsInt()
+  @IsOptional()
+  idRoleDefault?: number;
+
   @ApiPropertyOptional({
     description: 'Include relations (roleDefault, count jabatan)',
     type: Boolean,
     default: false,
-    example: false,
   })
   @IsBoolean()
   @Type(() => Boolean)
@@ -131,7 +132,6 @@ export class QueryDepartmentDto {
     description: 'Sort by field',
     enum: ['namaDepartemen', 'createdAt'],
     default: 'createdAt',
-    example: 'createdAt',
   })
   @IsString()
   @IsEnum(['namaDepartemen', 'createdAt'])
@@ -142,7 +142,6 @@ export class QueryDepartmentDto {
     description: 'Sort order',
     enum: ['asc', 'desc'],
     default: 'desc',
-    example: 'desc',
   })
   @IsString()
   @IsEnum(['asc', 'desc'])
@@ -150,9 +149,6 @@ export class QueryDepartmentDto {
   sortOrder?: 'asc' | 'desc' = 'desc';
 }
 
-// ============================================
-// RESPONSE DTOs
-// ============================================
 export class RoleDefaultDto {
   @ApiProperty({ example: 1 })
   idRole: number;
@@ -201,9 +197,6 @@ export class DepartmentResponseDto {
   _count?: DepartmentCountDto;
 }
 
-// ============================================
-// PAGINATION META
-// ============================================
 export class PaginationMetaDto {
   @ApiProperty({ example: 25, description: 'Total items' })
   total: number;
@@ -218,9 +211,6 @@ export class PaginationMetaDto {
   totalPages: number;
 }
 
-// ============================================
-// PAGINATED RESPONSE
-// ============================================
 export class PaginatedDepartmentResponseDto {
   @ApiProperty({ type: [DepartmentResponseDto] })
   data: DepartmentResponseDto[];
@@ -229,9 +219,6 @@ export class PaginatedDepartmentResponseDto {
   meta: PaginationMetaDto;
 }
 
-// ============================================
-// DEPARTMENT STATS DTO
-// ============================================
 export class DepartmentStatsDto {
   @ApiProperty({ example: 5 })
   totalJabatan: number;
@@ -243,4 +230,14 @@ export class DepartmentStatsDto {
 export class DepartmentWithStatsDto extends DepartmentResponseDto {
   @ApiProperty({ type: DepartmentStatsDto })
   stats: DepartmentStatsDto;
+}
+
+export class BulkDeleteDepartmentDto {
+  @ApiProperty({
+    description: 'Array of department IDs to delete',
+    example: ['uuid1', 'uuid2', 'uuid3'],
+    type: [String],
+  })
+  @IsNotEmpty()
+  ids: string[];
 }
