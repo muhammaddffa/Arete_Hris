@@ -1,44 +1,36 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 // src/common/utils/response.util.ts
 import { HttpStatus } from '@nestjs/common';
 import { ApiResponse, PaginationMeta } from '../interfaces/response.interface';
 
 export class ResponseUtil {
-  static success<T>(
-    data: T,
-    message: string,
-    statusCode: HttpStatus = HttpStatus.OK,
-  ): ApiResponse<T> {
+  // Existing methods...
+
+  static success<T>(data: T, message: string) {
     return {
-      statusCode,
+      statusCode: 200,
       message,
       data,
       timestamp: new Date().toISOString(),
     };
   }
 
-  static successWithMeta<T>(
-    data: T,
-    meta: PaginationMeta,
-    message: string,
-    statusCode: HttpStatus = HttpStatus.OK,
-  ): ApiResponse<T> {
+  static successWithMeta<T>(data: T, meta: any, message: string) {
     return {
-      statusCode,
+      statusCode: 200,
       message,
-      data,
-      meta,
+      data, // ← Data at top level
+      meta, // ← Meta at top level
       timestamp: new Date().toISOString(),
     };
   }
 
-  static created<T>(data: T, message: string): ApiResponse<T> {
-    return this.success(data, message, HttpStatus.CREATED);
-  }
-
-  static noContent(message: string): ApiResponse<null> {
+  static created<T>(data: T, message: string) {
     return {
-      statusCode: HttpStatus.NO_CONTENT,
+      statusCode: 201,
       message,
+      data,
       timestamp: new Date().toISOString(),
     };
   }

@@ -11,6 +11,8 @@ import { DepartmentModule } from './department/department.module';
 import { JabatanModule } from './jabatan/jabatan.module';
 import { KaryawanModule } from './karyawan/karyawan.module';
 import { UploadModule } from './upload/upload.module';
+import { BlacklistModule } from './blacklist/blacklist.module';
+import { WawancaraModule } from './wawancara/wawancara.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -40,6 +42,8 @@ import { UploadModule } from './upload/upload.module';
     UploadModule,
     JabatanModule,
     KaryawanModule,
+    BlacklistModule,
+    WawancaraModule,
   ],
   controllers: [AppController],
   providers: [AppService],
