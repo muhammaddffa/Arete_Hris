@@ -16,6 +16,8 @@ import { WawancaraModule } from './wawancara/wawancara.module';
 import { JadwalKerjaModule } from './jadwalkerja/jadwal-kerja.module';
 import { KaryawanJadwalModule } from './jadwalkaryawan/karyawan-jadwal.module';
 import { PresensiModule } from './presensi/presensi.module';
+import { JenisIzinModule } from './jenisizin/jenis-izin.module';
+import { SaldoCutiModule } from './saldocuti/saldo.cuti.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -50,6 +52,8 @@ import { PresensiModule } from './presensi/presensi.module';
     JadwalKerjaModule,
     KaryawanJadwalModule,
     PresensiModule,
+    JenisIzinModule,
+    SaldoCutiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
