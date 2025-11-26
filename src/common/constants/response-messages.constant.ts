@@ -17,6 +17,118 @@ export const RESPONSE_MESSAGES = {
     HAS_JABATAN: 'Departemen tidak dapat dihapus karena masih memiliki jabatan',
   },
 
+  JADWALKERJA: {
+    CREATED: 'Jadwal kerja berhasil dibuat',
+    UPDATED: 'Jadwal kerja berhasil diupdate',
+    DELETED: 'Jadwal kerja berhasil dihapus',
+    FOUND: 'Jadwal kerja ditemukan',
+    LIST: 'Daftar jadwal kerja berhasil diambil',
+    NOT_FOUND: 'Jadwal kerja tidak ditemukan',
+    ALREADY_EXISTS: 'Kode jadwal sudah digunakan',
+    IN_USE: 'Jadwal tidak dapat dihapus karena sedang digunakan',
+    STATISTICS: 'Statistik jadwal kerja berhasil diambil',
+  },
+
+  KARYAWANJADWAL: {
+    CREATED: 'Jadwal berhasil di-assign ke karyawan',
+    UPDATED: 'Karyawan jadwal berhasil diupdate',
+    DELETED: 'Karyawan jadwal berhasil dihapus',
+    FOUND: 'Karyawan jadwal ditemukan',
+    LIST: 'Daftar karyawan jadwal berhasil diambil',
+    NOT_FOUND: 'Karyawan jadwal tidak ditemukan',
+    KARYAWAN_NOT_FOUND: 'Karyawan tidak ditemukan',
+    JADWAL_NOT_FOUND: 'Jadwal kerja tidak ditemukan',
+    OVERLAPPING:
+      'Karyawan sudah memiliki jadwal yang bertumpukan pada periode tersebut',
+    ACTIVE_NOT_FOUND: 'Karyawan tidak memiliki jadwal aktif',
+    ENDED: 'Jadwal aktif berhasil diakhiri',
+  },
+
+  PRESENSI: {
+    CREATED: 'Presensi berhasil dibuat',
+    UPDATED: 'Presensi berhasil diupdate',
+    DELETED: 'Presensi berhasil dihapus',
+    FOUND: 'Presensi ditemukan',
+    LIST: 'Daftar presensi berhasil diambil',
+    NOT_FOUND: 'Presensi tidak ditemukan',
+    ALREADY_EXISTS: 'Presensi untuk tanggal ini sudah ada',
+    KARYAWAN_NOT_FOUND: 'Karyawan tidak ditemukan',
+    CLOCK_IN_SUCCESS: 'Clock in berhasil',
+    CLOCK_OUT_SUCCESS: 'Clock out berhasil',
+    ALREADY_CLOCKED_IN: 'Anda sudah melakukan clock in hari ini',
+    ALREADY_CLOCKED_OUT: 'Anda sudah melakukan clock out hari ini',
+    NOT_CLOCKED_IN: 'Anda belum melakukan clock in hari ini',
+    MUST_CLOCK_IN_FIRST: 'Anda harus clock in terlebih dahulu',
+    SUMMARY: 'Summary presensi berhasil diambil',
+  },
+
+  JENISIZIN: {
+    CREATED: 'Jenis izin berhasil dibuat',
+    UPDATED: 'Jenis izin berhasil diupdate',
+    DELETED: 'Jenis izin berhasil dihapus',
+    FOUND: 'Jenis izin ditemukan',
+    LIST: 'Daftar jenis izin berhasil diambil',
+    NOT_FOUND: 'Jenis izin tidak ditemukan',
+    ALREADY_EXISTS: 'Kode izin sudah digunakan',
+    IN_USE: 'Jenis izin tidak dapat dihapus karena sedang digunakan',
+  },
+
+  SALDOCUTI: {
+    CREATED: 'Saldo cuti berhasil dibuat',
+    UPDATED: 'Saldo cuti berhasil diupdate',
+    DELETED: 'Saldo cuti berhasil dihapus',
+    FOUND: 'Saldo cuti ditemukan',
+    LIST: 'Daftar saldo cuti berhasil diambil',
+    NOT_FOUND: 'Saldo cuti tidak ditemukan',
+    ALREADY_EXISTS: 'Saldo cuti untuk tahun ini sudah ada',
+    KARYAWAN_NOT_FOUND: 'Karyawan tidak ditemukan',
+    INSUFFICIENT: 'Saldo cuti tidak mencukupi',
+    DEDUCTED: 'Saldo cuti berhasil dikurangi',
+    RESTORED: 'Saldo cuti berhasil dikembalikan',
+    AUTO_CREATED: 'Saldo cuti tahunan berhasil dibuat otomatis',
+  },
+
+  PENGAJUANIZIN: {
+    CREATED: 'Pengajuan izin berhasil dibuat',
+    UPDATED: 'Pengajuan izin berhasil diupdate',
+    DELETED: 'Pengajuan izin berhasil dihapus',
+    FOUND: 'Pengajuan izin ditemukan',
+    LIST: 'Daftar pengajuan izin berhasil diambil',
+    NOT_FOUND: 'Pengajuan izin tidak ditemukan',
+    KARYAWAN_NOT_FOUND: 'Karyawan tidak ditemukan',
+    ATASAN_NOT_FOUND: 'Atasan tidak ditemukan',
+    JENIS_IZIN_NOT_FOUND: 'Jenis izin tidak ditemukan',
+    APPROVED: 'Pengajuan izin berhasil disetujui',
+    REJECTED: 'Pengajuan izin berhasil ditolak',
+    CANCELLED: 'Pengajuan izin berhasil dibatalkan',
+    CANNOT_UPDATE:
+      'Pengajuan yang sudah disetujui/ditolak tidak dapat diupdate',
+    CANNOT_CANCEL:
+      'Pengajuan yang sudah disetujui/ditolak tidak dapat dibatalkan',
+    INSUFFICIENT_CUTI: 'Saldo cuti tidak mencukupi',
+    INVALID_DATE_RANGE: 'Tanggal selesai harus lebih besar dari tanggal mulai',
+  },
+
+  PENGAJUANLEMBUR: {
+    CREATED: 'Pengajuan lembur berhasil dibuat',
+    UPDATED: 'Pengajuan lembur berhasil diupdate',
+    DELETED: 'Pengajuan lembur berhasil dihapus',
+    FOUND: 'Pengajuan lembur ditemukan',
+    LIST: 'Daftar pengajuan lembur berhasil diambil',
+    NOT_FOUND: 'Pengajuan lembur tidak ditemukan',
+    KARYAWAN_NOT_FOUND: 'Karyawan tidak ditemukan',
+    ATASAN_NOT_FOUND: 'Atasan tidak ditemukan',
+    APPROVED: 'Pengajuan lembur berhasil disetujui',
+    REJECTED: 'Pengajuan lembur berhasil ditolak',
+    CANCELLED: 'Pengajuan lembur berhasil dibatalkan',
+    CANNOT_UPDATE:
+      'Pengajuan yang sudah disetujui/ditolak tidak dapat diupdate',
+    CANNOT_CANCEL:
+      'Pengajuan yang sudah disetujui/ditolak tidak dapat dibatalkan',
+    INVALID_TIME: 'Jam selesai harus lebih besar dari jam mulai',
+    TOTAL_JAM: 'Total jam lembur berhasil diambil',
+  },
+
   JABATAN: {
     CREATED: 'Jabatan berhasil dibuat',
     UPDATED: 'Jabatan berhasil diupdate',
@@ -89,7 +201,6 @@ export const RESPONSE_MESSAGES = {
     NOT_BLACKLISTED: 'Karyawan tidak di blacklist',
   },
 
-  // Wawancara
   WAWANCARA: {
     CREATED: 'Wawancara berhasil dijadwalkan',
     UPDATED: 'Data wawancara berhasil diupdate',
@@ -109,7 +220,6 @@ export const RESPONSE_MESSAGES = {
     ALREADY_COMPLETED: 'Wawancara sudah diselesaikan',
   },
 
-  // Upload
   UPLOAD: {
     SUCCESS: 'File berhasil diupload',
     FAILED: 'Upload file gagal',

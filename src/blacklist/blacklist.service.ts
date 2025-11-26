@@ -139,13 +139,17 @@ export class BlacklistService {
       this.prisma.refBlacklist.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data,
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
       },
     };
   }

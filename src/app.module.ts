@@ -13,6 +13,9 @@ import { KaryawanModule } from './karyawan/karyawan.module';
 import { UploadModule } from './upload/upload.module';
 import { BlacklistModule } from './blacklist/blacklist.module';
 import { WawancaraModule } from './wawancara/wawancara.module';
+import { JadwalKerjaModule } from './jadwalkerja/jadwal-kerja.module';
+import { KaryawanJadwalModule } from './jadwalkaryawan/karyawan-jadwal.module';
+import { PresensiModule } from './presensi/presensi.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -44,6 +47,9 @@ import { WawancaraModule } from './wawancara/wawancara.module';
     KaryawanModule,
     BlacklistModule,
     WawancaraModule,
+    JadwalKerjaModule,
+    KaryawanJadwalModule,
+    PresensiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
