@@ -1,16 +1,11 @@
+import { PaginationMeta } from '../utils/pagination.utils';
+
 export interface ApiResponse<T = any> {
   statusCode: number;
   message: string;
   data?: T;
   meta?: PaginationMeta;
   timestamp: string;
-}
-
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 }
 
 export interface ErrorResponse {
