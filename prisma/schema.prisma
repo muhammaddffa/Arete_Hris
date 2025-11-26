@@ -291,7 +291,7 @@ model KaryawanJadwal {
   karyawan RefKaryawan    @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
   jadwal   RefJadwalKerja @relation(fields: [idJadwal], references: [idJadwal], onDelete: Restrict)
 
-  @@unique([idKaryawan, tanggalMulaiEfektif]) // Prevent duplicate schedule on same date
+  @@unique([idKaryawan, tanggalMulaiEfektif])
   @@index([idKaryawan])
   @@index([idJadwal])
   @@index([tanggalMulaiEfektif])
@@ -335,7 +335,7 @@ model Presensi {
   // Relations
   karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
 
-  @@unique([idKaryawan, tanggalPresensi]) // One attendance record per day per employee
+  @@unique([idKaryawan, tanggalPresensi])
   @@index([idKaryawan])
   @@index([tanggalPresensi])
   @@index([statusKehadiran])
@@ -343,11 +343,10 @@ model Presensi {
 }
 
 model RefJenisIzin {
-  idJenisIzin Int      @id @default(autoincrement()) @map("id_jenis_izin")
+  idJenisIzin String   @id @default(uuid()) @map("id_jenis_izin") @db.Uuid
   kodeIzin    String   @unique @map("kode_izin") @db.VarChar(20)
   namaIzin    String   @map("nama_izin") @db.VarChar(100)
-  potongCuti  Boolean  @map("potong_cuti") @default(true) // Does it deduct leave balance?
-  deskripsi   String?  @db.Text
+  potongCuti  Boolean  @map("potong_cuti") @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -387,7 +386,7 @@ enum StatusPersetujuan {
 model PengajuanIzin {
   idPengajuanIzin   String            @id @default(uuid()) @map("id_pengajuan_izin") @db.Uuid
   idKaryawan        String            @map("id_karyawan") @db.Uuid
-  idJenisIzin       Int               @map("id_jenis_izin")
+  idJenisIzin       String            @map("id_jenis_izin") @db.Uuid
   tanggalMulai      DateTime          @map("tanggal_mulai") @db.Date
   tanggalSelesai    DateTime          @map("tanggal_selesai") @db.Date
   jumlahHari        Int               @map("jumlah_hari")
