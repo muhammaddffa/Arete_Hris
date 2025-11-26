@@ -260,9 +260,6 @@ export class KaryawanService {
     return this.transformer.transformDetail(karyawan);
   }
 
-  /**
-   * Find one without transform (for internal use like getting file paths)
-   */
   async findOneRaw(id: string) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: id },
@@ -282,9 +279,6 @@ export class KaryawanService {
     return karyawan;
   }
 
-  // ============================================
-  // UPDATE
-  // ============================================
   async update(id: string, updateKaryawanDto: UpdateKaryawanDto) {
     // Check existence (without transform for internal use)
     const existing = await this.prisma.refKaryawan.findUnique({

@@ -177,7 +177,11 @@ export class KaryawanController {
   @ApiOperation({ summary: 'Get all karyawan with filters and pagination' })
   async findAll(@Query() filterDto: FilterKaryawanDto) {
     const result = await this.karyawanService.findAll(filterDto);
-    return ResponseUtil.success(result, 'Data karyawan berhasil diambil');
+    return ResponseUtil.successWithMeta(
+      result.data, // ← Pass data directly
+      result.meta, // ← Pass meta separately
+      'Data karyawan berhasil diambil',
+    );
   }
 
   @Get(':id')
