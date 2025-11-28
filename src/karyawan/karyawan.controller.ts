@@ -178,8 +178,8 @@ export class KaryawanController {
   async findAll(@Query() filterDto: FilterKaryawanDto) {
     const result = await this.karyawanService.findAll(filterDto);
     return ResponseUtil.successWithMeta(
-      result.data, // ← Pass data directly
-      result.meta, // ← Pass meta separately
+      result.data,
+      result.meta,
       'Data karyawan berhasil diambil',
     );
   }
@@ -371,6 +371,4 @@ export class KaryawanController {
     );
     return ResponseUtil.success(data, 'Karyawan berhasil resign');
   }
-
-  // ... other endpoints (stats, team, etc.)
 }
