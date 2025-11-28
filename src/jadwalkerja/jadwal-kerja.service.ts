@@ -19,9 +19,6 @@ import { Prisma } from '@prisma/client';
 export class JadwalKerjaService {
   constructor(private prisma: PrismaService) {}
 
-  // ============================================================
-  // CREATE
-  // ============================================================
   async create(dto: CreateJadwalKerjaDto) {
     // Check duplicate kodeJadwal
     const exists = await this.prisma.refJadwalKerja.findUnique({
@@ -40,9 +37,6 @@ export class JadwalKerjaService {
     });
   }
 
-  // ============================================================
-  // FIND ALL (ADVANCED PAGINATION & SEARCH LIKE DEPARTMENT)
-  // ============================================================
   async findAll(query: QueryJadwalDto) {
     const {
       search,
@@ -151,9 +145,6 @@ export class JadwalKerjaService {
     return jadwal;
   }
 
-  // ============================================================
-  // FIND BY KODE
-  // ============================================================
   async findByKode(kodeJadwal: string) {
     const jadwal = await this.prisma.refJadwalKerja.findUnique({
       where: { kodeJadwal },

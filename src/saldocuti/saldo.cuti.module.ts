@@ -7,5 +7,6 @@ import { SaldoCutiService } from './saldo-cuti.service';
   imports: [PrismaModule],
   controllers: [SaldoCutiController],
   providers: [SaldoCutiService],
+  exports: [SaldoCutiService],
 })
 export class SaldoCutiModule {}
