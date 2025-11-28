@@ -107,16 +107,10 @@ export class KaryawanTransformer {
     };
   }
 
-  /**
-   * Transform for create/update response (same as detail)
-   */
   transformCreateUpdate(karyawan: any) {
     return this.transformDetail(karyawan);
   }
 
-  /**
-   * Get file paths from karyawan (for controller usage)
-   */
   getFilePaths(karyawan: any): {
     pasfoto: string | null;
     skck: string | null;
@@ -131,10 +125,6 @@ export class KaryawanTransformer {
     };
   }
 
-  /**
-   * Helper: Mask NIK (show first 6 and last 4 digits)
-   * Example: 3201012345678901 -> 320101******8901
-   */
   private maskNIK(nik?: string): string | null {
     if (!nik) return null;
     if (nik.length !== 16) return nik;
@@ -142,10 +132,6 @@ export class KaryawanTransformer {
     return `${nik.substring(0, 6)}******${nik.substring(12)}`;
   }
 
-  /**
-   * Helper: Mask phone number (show first 4 and last 3 digits)
-   * Example: 081234567890 -> 0812****890
-   */
   private maskPhone(phone?: string): string | null {
     if (!phone) return null;
     if (phone.length < 8) return phone;
