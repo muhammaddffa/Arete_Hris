@@ -7,9 +7,10 @@ import {
   IsEnum,
   IsUUID,
   Min,
+  Allow,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiHideProperty } from '@nestjs/swagger';
+import { Type, Transform } from 'class-transformer';
 
 export enum StatusPersetujuan {
   PENDING = 'pending',
@@ -24,7 +25,10 @@ export class CreatePengajuanIzinDto {
   @IsNotEmpty()
   idKaryawan: string;
 
-  @ApiProperty({ example: 'unique-id', description: 'ID Jenis Izin (INT)' })
+  @ApiProperty({
+    example: 'uuid-jenis-izin',
+    description: 'ID Jenis Izin (UUID)',
+  })
   @IsUUID()
   @IsNotEmpty()
   idJenisIzin: string;
@@ -42,6 +46,7 @@ export class CreatePengajuanIzinDto {
   @ApiProperty({ example: 3, description: 'Jumlah hari izin' })
   @IsInt()
   @Type(() => Number)
+  @Transform(({ value }) => parseInt(value)) // For form-data string conversion
   @Min(1)
   @IsNotEmpty()
   jumlahHari: number;
@@ -54,11 +59,6 @@ export class CreatePengajuanIzinDto {
   @IsNotEmpty()
   keterangan: string;
 
-  @ApiProperty({ example: 'https://cloudinary.com/bukti.pdf', required: false })
-  @IsString()
-  @IsOptional()
-  pathBukti?: string;
-
   @ApiProperty({
     example: 'uuid-atasan',
     description: 'ID Atasan (UUID)',
@@ -67,10 +67,16 @@ export class CreatePengajuanIzinDto {
   @IsUUID()
   @IsOptional()
   idAtasan?: string;
+
+  // pathBukti will be set from uploaded file via cloudinary service
+  // Hidden from Swagger, allowed by class-validator
+  @ApiHideProperty()
+  @Allow()
+  pathBukti?: string;
 }
 
 export class UpdatePengajuanIzinDto {
-  @ApiProperty({ example: 1, required: false })
+  @ApiProperty({ example: 'uuid-jenis-izin', required: false })
   @IsUUID()
   @IsOptional()
   idJenisIzin?: string;
@@ -88,6 +94,7 @@ export class UpdatePengajuanIzinDto {
   @ApiProperty({ example: 3, required: false })
   @IsInt()
   @Type(() => Number)
+  @Transform(({ value }) => parseInt(value))
   @Min(1)
   @IsOptional()
   jumlahHari?: number;
@@ -97,9 +104,10 @@ export class UpdatePengajuanIzinDto {
   @IsOptional()
   keterangan?: string;
 
-  @ApiProperty({ example: 'https://cloudinary.com/bukti.pdf', required: false })
-  @IsString()
-  @IsOptional()
+  // pathBukti will be set from uploaded file (internal use only)
+  // Hidden from Swagger, allowed by class-validator
+  @ApiHideProperty()
+  @Allow()
   pathBukti?: string;
 }
 
