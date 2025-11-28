@@ -81,6 +81,12 @@ async function bootstrap() {
     .addTag('Blacklist', 'Blacklist management endpoints')
     .addTag('Wawancara', 'Interview management endpoints (HRD & User)')
     .addTag('Upload', 'File upload to Cloudinary')
+    .addTag('Jadwal Kerja', 'Work schedule management endpoints')
+    .addTag('Jadwal Karyawan', 'Employee schedule management endpoints')
+    .addTag('Presensi', 'Attendance management endpoints')
+    .addTag('Jenis Izin', 'Leave type management endpoints')
+    .addTag('Saldo Cuti', 'Leave balance management endpoints')
+    .addTag('Pengajuan Izin', 'Leave application management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -89,7 +95,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }
 bootstrap();

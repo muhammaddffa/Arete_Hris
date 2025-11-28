@@ -13,6 +13,12 @@ import { KaryawanModule } from './karyawan/karyawan.module';
 import { UploadModule } from './upload/upload.module';
 import { BlacklistModule } from './blacklist/blacklist.module';
 import { WawancaraModule } from './wawancara/wawancara.module';
+import { JadwalKerjaModule } from './jadwalkerja/jadwal-kerja.module';
+import { KaryawanJadwalModule } from './jadwalkaryawan/karyawan-jadwal.module';
+import { PresensiModule } from './presensi/presensi.module';
+import { JenisIzinModule } from './jenisizin/jenis-izin.module';
+import { SaldoCutiModule } from './saldocuti/saldo.cuti.module';
+import { PengajuanIzinModule } from './pengajuanizin/pengajuan-izin.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -44,6 +50,12 @@ import { WawancaraModule } from './wawancara/wawancara.module';
     KaryawanModule,
     BlacklistModule,
     WawancaraModule,
+    JadwalKerjaModule,
+    KaryawanJadwalModule,
+    PresensiModule,
+    JenisIzinModule,
+    SaldoCutiModule,
+    PengajuanIzinModule,
   ],
   controllers: [AppController],
   providers: [AppService],

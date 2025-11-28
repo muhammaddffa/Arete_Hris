@@ -5,9 +5,7 @@ import {
   JenisWawancara,
 } from '../model/blacklist-wawancara.model';
 
-// ============================================
-// REGEX PATTERNS
-// ============================================
+
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
 
@@ -101,17 +99,12 @@ export const CompleteWawancaraSchema = z.object({
   nilaiHasil: z.number().int().min(1).max(10),
 });
 
-// ============================================
-// TYPE EXPORTS
-// ============================================
 export type CreateWawancaraInput = z.infer<typeof CreateWawancaraSchema>;
 export type UpdateWawancaraInput = z.infer<typeof UpdateWawancaraSchema>;
 export type FilterWawancaraInput = z.infer<typeof FilterWawancaraSchema>;
 export type CompleteWawancaraInput = z.infer<typeof CompleteWawancaraSchema>;
 
-// ============================================
-// VALIDATION FUNCTIONS
-// ============================================
+
 export function validateCreateWawancara(data: unknown): CreateWawancaraInput {
   return CreateWawancaraSchema.parse(data);
 }
