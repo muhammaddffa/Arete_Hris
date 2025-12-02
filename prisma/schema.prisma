@@ -91,6 +91,7 @@ model RefJabatan {
   atasan     RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
   karyawan   RefKaryawan[] @relation("KaryawanJabatan")
 
+  @@unique([namaJabatan, idDepartemen])
   @@index([idDepartemen])
   @@index([idAtasan])
   @@map("refjabatan")
@@ -325,9 +326,9 @@ model Presensi {
   statusKehadiran  StatusKehadiran  @map("status_kehadiran") @default(hadir)
   sumberPresensi   SumberPresensi   @map("sumber_presensi") @default(manual)
   keterangan       String?          @db.Text
-  lokasiClockIn    String?          @map("lokasi_clock_in") @db.VarChar(255) // Lat,Long or Address
+  lokasiClockIn    String?          @map("lokasi_clock_in") @db.VarChar(255) 
   lokasiClockOut   String?          @map("lokasi_clock_out") @db.VarChar(255)
-  fotoClockIn      String?          @map("foto_clock_in") @db.VarChar(500) // Cloudinary URL
+  fotoClockIn      String?          @map("foto_clock_in") @db.VarChar(500)
   fotoClockOut     String?          @map("foto_clock_out") @db.VarChar(500)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")

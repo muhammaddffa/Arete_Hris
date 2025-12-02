@@ -12,14 +12,9 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JadwalKerjaService } from './jadwal-kerja.service';
 import {
   CreateJadwalKerjaDto,
@@ -28,17 +23,23 @@ import {
 } from './dto/jadwal-kerja.dto';
 import { createResponse, ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @ApiTags('Jadwal Kerja')
 @Controller('jadwal-kerja')
+@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@ApiBearerAuth()
 export class JadwalKerjaController {
   constructor(private readonly jadwalKerjaService: JadwalKerjaService) {}
 
+  // CREATE - Hanya HRD
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Buat jadwal kerja baru' })
-  @ApiResponse({ status: 201, description: 'Jadwal kerja berhasil dibuat' })
-  @ApiResponse({ status: 409, description: 'Kode jadwal sudah digunakan' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Buat jadwal kerja (HRD only)' })
   async create(@Body() createDto: CreateJadwalKerjaDto) {
     const data = await this.jadwalKerjaService.create(createDto);
     return createResponse(
@@ -48,12 +49,10 @@ export class JadwalKerjaController {
     );
   }
 
+  // GET ALL - Semua yang login
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get semua jadwal kerja' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiResponse({ status: 200, description: 'Daftar jadwal kerja' })
   async findAll(@Query() query: QueryJadwalDto) {
     const result = await this.jadwalKerjaService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -63,10 +62,12 @@ export class JadwalKerjaController {
     );
   }
 
+  // GET STATISTICS - HRD & Manager
   @Get('statistics')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get statistik jadwal kerja' })
-  @ApiResponse({ status: 200, description: 'Statistik jadwal kerja' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('view_all_karyawan')
+  @ApiOperation({ summary: 'Get statistik jadwal kerja (HRD & Manager)' })
   async getStatistics() {
     const data = await this.jadwalKerjaService.getStatistics();
     return createResponse(
@@ -76,12 +77,10 @@ export class JadwalKerjaController {
     );
   }
 
+  // GET BY ID - Semua yang login
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get jadwal kerja by ID' })
-  @ApiParam({ name: 'id', description: 'ID Jadwal Kerja (UUID)' })
-  @ApiResponse({ status: 200, description: 'Detail jadwal kerja' })
-  @ApiResponse({ status: 404, description: 'Jadwal kerja tidak ditemukan' })
   async findOne(@Param('id') id: string) {
     const data = await this.jadwalKerjaService.findOne(id);
     return createResponse(
@@ -91,27 +90,12 @@ export class JadwalKerjaController {
     );
   }
 
-  @Get('kode/:kodeJadwal')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get jadwal kerja by kode' })
-  @ApiParam({ name: 'kodeJadwal', description: 'Kode Jadwal' })
-  @ApiResponse({ status: 200, description: 'Detail jadwal kerja' })
-  @ApiResponse({ status: 404, description: 'Jadwal kerja tidak ditemukan' })
-  async findByKode(@Param('kodeJadwal') kodeJadwal: string) {
-    const data = await this.jadwalKerjaService.findByKode(kodeJadwal);
-    return createResponse(
-      HttpStatus.OK,
-      RESPONSE_MESSAGES.JADWALKERJA.FOUND,
-      data,
-    );
-  }
-
+  // UPDATE - Hanya HRD
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update jadwal kerja' })
-  @ApiParam({ name: 'id', description: 'ID Jadwal Kerja (UUID)' })
-  @ApiResponse({ status: 200, description: 'Jadwal kerja berhasil diupdate' })
-  @ApiResponse({ status: 404, description: 'Jadwal kerja tidak ditemukan' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Update jadwal kerja (HRD only)' })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateJadwalKerjaDto,
@@ -124,13 +108,12 @@ export class JadwalKerjaController {
     );
   }
 
+  // DELETE - Hanya HRD
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Hapus jadwal kerja' })
-  @ApiParam({ name: 'id', description: 'ID Jadwal Kerja (UUID)' })
-  @ApiResponse({ status: 200, description: 'Jadwal kerja berhasil dihapus' })
-  @ApiResponse({ status: 404, description: 'Jadwal kerja tidak ditemukan' })
-  @ApiResponse({ status: 409, description: 'Jadwal sedang digunakan' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Hapus jadwal kerja (HRD only)' })
   async remove(@Param('id') id: string) {
     await this.jadwalKerjaService.remove(id);
     return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.JADWALKERJA.DELETED);

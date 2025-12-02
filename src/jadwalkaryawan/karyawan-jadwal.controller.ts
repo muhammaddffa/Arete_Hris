@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Controller,
   Get,
@@ -9,14 +11,10 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { KaryawanJadwalService } from './karyawan-jadwal.service';
 import {
   CreateKaryawanJadwalDto,
@@ -25,25 +23,33 @@ import {
 } from './dto/karyawan-jadwal.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { RESPONSE_MESSAGES } from 'src/common/constants/response-messages.constant';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @ApiTags('Karyawan Jadwal')
 @Controller('karyawan-jadwal')
+@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@ApiBearerAuth()
 export class KaryawanJadwalController {
   constructor(private readonly karyawanJadwalService: KaryawanJadwalService) {}
 
+  // CREATE - Hanya HRD
   @Post()
-  @ApiOperation({ summary: 'Assign jadwal ke karyawan' })
-  @ApiResponse({ status: 201, description: 'Jadwal berhasil di-assign' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Assign jadwal ke karyawan (HRD only)' })
   create(@Body() createDto: CreateKaryawanJadwalDto) {
     return this.karyawanJadwalService.create(createDto);
   }
 
+  // GET ALL - HRD & Manager
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get semua karyawan jadwal' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('view_all_karyawan')
+  @ApiOperation({ summary: 'Get semua karyawan jadwal (HRD & Manager)' })
   async findAll(@Query() query: QueryKaryawanJadwalDto) {
     const result = await this.karyawanJadwalService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -53,51 +59,55 @@ export class KaryawanJadwalController {
     );
   }
 
+  // GET BY KARYAWAN - HRD, Manager, atau Karyawan sendiri
   @Get('karyawan/:idKaryawan')
   @ApiOperation({ summary: 'Get jadwal by karyawan' })
-  @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
-  findByKaryawan(@Param('idKaryawan') idKaryawan: string) {
+  async findByKaryawan(
+    @Param('idKaryawan') idKaryawan: string,
+    @CurrentUser() user: any,
+  ) {
+    // Validasi: User hanya bisa lihat jadwal sendiri kecuali HRD/Manager
+    if (
+      idKaryawan !== user.idKaryawan &&
+      !user.permissions.includes('view_all_karyawan')
+    ) {
+      throw new ForbiddenException('Anda hanya bisa melihat jadwal sendiri');
+    }
     return this.karyawanJadwalService.findByKaryawan(idKaryawan);
   }
 
+  // GET ACTIVE - Semua yang login (untuk diri sendiri)
   @Get('karyawan/:idKaryawan/active')
   @ApiOperation({ summary: 'Get jadwal aktif karyawan' })
-  @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
-  findActiveByKaryawan(@Param('idKaryawan') idKaryawan: string) {
+  async findActiveByKaryawan(
+    @Param('idKaryawan') idKaryawan: string,
+    @CurrentUser() user: any,
+  ) {
+    // Validasi ownership
+    if (
+      idKaryawan !== user.idKaryawan &&
+      !user.permissions.includes('view_all_karyawan')
+    ) {
+      throw new ForbiddenException('Anda hanya bisa melihat jadwal sendiri');
+    }
     return this.karyawanJadwalService.findActiveByKaryawan(idKaryawan);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get karyawan jadwal by ID' })
-  @ApiParam({ name: 'id', description: 'ID Karyawan Jadwal (UUID)' })
-  findOne(@Param('id') id: string) {
-    return this.karyawanJadwalService.findOne(id);
-  }
-
+  // UPDATE - Hanya HRD
   @Patch(':id')
-  @ApiOperation({ summary: 'Update karyawan jadwal' })
-  @ApiParam({ name: 'id', description: 'ID Karyawan Jadwal (UUID)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Update karyawan jadwal (HRD only)' })
   update(@Param('id') id: string, @Body() updateDto: UpdateKaryawanJadwalDto) {
     return this.karyawanJadwalService.update(id, updateDto);
   }
 
-  @Post('karyawan/:idKaryawan/end')
-  @ApiOperation({ summary: 'Akhiri jadwal aktif karyawan' })
-  @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
-  endActiveSchedule(
-    @Param('idKaryawan') idKaryawan: string,
-    @Body('tanggalSelesai') tanggalSelesai: string,
-  ) {
-    return this.karyawanJadwalService.endActiveSchedule(
-      idKaryawan,
-      new Date(tanggalSelesai),
-    );
-  }
-
+  // DELETE - Hanya HRD
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Hapus karyawan jadwal' })
-  @ApiParam({ name: 'id', description: 'ID Karyawan Jadwal (UUID)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jadwal_kerja')
+  @ApiOperation({ summary: 'Hapus karyawan jadwal (HRD only)' })
   remove(@Param('id') id: string) {
     return this.karyawanJadwalService.remove(id);
   }
