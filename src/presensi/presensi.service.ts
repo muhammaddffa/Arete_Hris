@@ -1,13 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -16,48 +12,40 @@ import {
   ClockInDto,
   ClockOutDto,
   StatusKehadiran,
-  SumberPresensi,
 } from './dto/presensi.dto';
-import {
-  getPaginationParams,
-  createPaginatedResponse,
-} from '../common/utils/pagination.utils';
 
 @Injectable()
 export class PresensiService {
   constructor(private prisma: PrismaService) {}
 
+  // ===== 1. CREATE MANUAL (HRD Only) =====
   async create(createDto: CreatePresensiDto) {
+    // Validasi: Cek apakah karyawan ada
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: createDto.idKaryawan },
     });
 
     if (!karyawan) {
-      throw new NotFoundException(
-        `Karyawan dengan ID ${createDto.idKaryawan} tidak ditemukan`,
-      );
+      throw new NotFoundException('Karyawan tidak ditemukan');
     }
 
-    const tanggal = new Date(createDto.tanggalPresensi);
-    const existing = await this.prisma.presensi.findUnique({
+    // Validasi: Cek duplikasi presensi di tanggal yang sama
+    const existingPresensi = await this.prisma.presensi.findFirst({
       where: {
-        idKaryawan_tanggalPresensi: {
-          idKaryawan: createDto.idKaryawan,
-          tanggalPresensi: tanggal,
-        },
+        idKaryawan: createDto.idKaryawan,
+        tanggalPresensi: new Date(createDto.tanggalPresensi),
       },
     });
 
-    if (existing) {
-      throw new ConflictException(
-        `Presensi untuk tanggal ${createDto.tanggalPresensi} sudah ada`,
-      );
+    if (existingPresensi) {
+      throw new ConflictException('Presensi untuk tanggal ini sudah ada');
     }
 
+    // Buat presensi
     return this.prisma.presensi.create({
       data: {
-        ...createDto,
-        tanggalPresensi: tanggal,
+        idKaryawan: createDto.idKaryawan,
+        tanggalPresensi: new Date(createDto.tanggalPresensi),
         waktuClockIn: createDto.waktuClockIn
           ? new Date(createDto.waktuClockIn)
           : null,
@@ -65,14 +53,18 @@ export class PresensiService {
           ? new Date(createDto.waktuClockOut)
           : null,
         statusKehadiran: createDto.statusKehadiran || StatusKehadiran.HADIR,
-        sumberPresensi: createDto.sumberPresensi || SumberPresensi.MANUAL,
+        sumberPresensi: createDto.sumberPresensi || 'manual',
+        keterangan: createDto.keterangan,
+        lokasiClockIn: createDto.lokasiClockIn,
+        lokasiClockOut: createDto.lokasiClockOut,
+        fotoClockIn: createDto.fotoClockIn,
+        fotoClockOut: createDto.fotoClockOut,
       },
       include: {
         karyawan: {
           select: {
-            idKaryawan: true,
-            nik: true,
             nama: true,
+            nik: true,
           },
         },
       },
@@ -80,70 +72,46 @@ export class PresensiService {
   }
 
   async clockIn(clockInDto: ClockInDto) {
+    // Validasi: Cek apakah karyawan ada
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: clockInDto.idKaryawan },
     });
 
     if (!karyawan) {
-      throw new NotFoundException(
-        `Karyawan dengan ID ${clockInDto.idKaryawan} tidak ditemukan`,
-      );
+      throw new NotFoundException('Karyawan tidak ditemukan');
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const existingPresensi = await this.prisma.presensi.findUnique({
+    // Validasi: Cek apakah sudah clock in hari ini
+    const existingPresensi = await this.prisma.presensi.findFirst({
       where: {
-        idKaryawan_tanggalPresensi: {
-          idKaryawan: clockInDto.idKaryawan,
-          tanggalPresensi: today,
-        },
+        idKaryawan: clockInDto.idKaryawan,
+        tanggalPresensi: today,
       },
     });
 
-    if (existingPresensi && existingPresensi.waktuClockIn) {
-      throw new ConflictException('Anda sudah melakukan clock in hari ini');
-    }
-
     if (existingPresensi) {
-      return this.prisma.presensi.update({
-        where: { idPresensi: existingPresensi.idPresensi },
-        data: {
-          waktuClockIn: new Date(),
-          lokasiClockIn: clockInDto.lokasiClockIn,
-          fotoClockIn: clockInDto.fotoClockIn,
-          statusKehadiran: StatusKehadiran.HADIR,
-          sumberPresensi: SumberPresensi.MOBILE_APP,
-        },
-        include: {
-          karyawan: {
-            select: {
-              idKaryawan: true,
-              nik: true,
-              nama: true,
-            },
-          },
-        },
-      });
+      throw new ConflictException('Anda sudah clock in hari ini');
     }
 
+    // Buat presensi baru (clock in)
     return this.prisma.presensi.create({
       data: {
         idKaryawan: clockInDto.idKaryawan,
         tanggalPresensi: today,
         waktuClockIn: new Date(),
+        statusKehadiran: StatusKehadiran.HADIR,
+        sumberPresensi: 'web_app',
         lokasiClockIn: clockInDto.lokasiClockIn,
         fotoClockIn: clockInDto.fotoClockIn,
-        statusKehadiran: StatusKehadiran.HADIR,
-        sumberPresensi: SumberPresensi.MOBILE_APP,
       },
       include: {
         karyawan: {
           select: {
-            idKaryawan: true,
-            nik: true,
             nama: true,
+            nik: true,
           },
         },
       },
@@ -154,27 +122,23 @@ export class PresensiService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const presensi = await this.prisma.presensi.findUnique({
+    // Cari presensi hari ini
+    const presensi = await this.prisma.presensi.findFirst({
       where: {
-        idKaryawan_tanggalPresensi: {
-          idKaryawan,
-          tanggalPresensi: today,
-        },
+        idKaryawan,
+        tanggalPresensi: today,
       },
     });
 
     if (!presensi) {
-      throw new NotFoundException('Anda belum melakukan clock in hari ini');
-    }
-
-    if (!presensi.waktuClockIn) {
-      throw new BadRequestException('Anda harus clock in terlebih dahulu');
+      throw new NotFoundException('Anda belum clock in hari ini');
     }
 
     if (presensi.waktuClockOut) {
-      throw new ConflictException('Anda sudah melakukan clock out hari ini');
+      throw new ConflictException('Anda sudah clock out hari ini');
     }
 
+    // Update dengan waktu clock out
     return this.prisma.presensi.update({
       where: { idPresensi: presensi.idPresensi },
       data: {
@@ -185,9 +149,8 @@ export class PresensiService {
       include: {
         karyawan: {
           select: {
-            idKaryawan: true,
-            nik: true,
             nama: true,
+            nik: true,
           },
         },
       },
@@ -197,74 +160,90 @@ export class PresensiService {
   async findAll(
     page: number = 1,
     limit: number = 10,
-    params?: {
+    filters?: {
       startDate?: string;
       endDate?: string;
       idKaryawan?: string;
       statusKehadiran?: StatusKehadiran;
     },
   ) {
-    const { skip, take } = getPaginationParams(page, limit);
+    const skip = (page - 1) * limit;
+
+    // Build where clause
     const where: any = {};
 
-    if (params?.startDate || params?.endDate) {
-      where.tanggalPresensi = {};
-      if (params.startDate)
-        where.tanggalPresensi.gte = new Date(params.startDate);
-      if (params.endDate) where.tanggalPresensi.lte = new Date(params.endDate);
+    if (filters?.startDate && filters?.endDate) {
+      where.tanggalPresensi = {
+        gte: new Date(filters.startDate),
+        lte: new Date(filters.endDate),
+      };
+    } else if (filters?.startDate) {
+      where.tanggalPresensi = {
+        gte: new Date(filters.startDate),
+      };
+    } else if (filters?.endDate) {
+      where.tanggalPresensi = {
+        lte: new Date(filters.endDate),
+      };
     }
 
-    if (params?.idKaryawan) where.idKaryawan = params.idKaryawan;
-    if (params?.statusKehadiran) where.statusKehadiran = params.statusKehadiran;
+    if (filters?.idKaryawan) {
+      where.idKaryawan = filters.idKaryawan;
+    }
 
+    if (filters?.statusKehadiran) {
+      where.statusKehadiran = filters.statusKehadiran;
+    }
+
+    // Execute queries
     const [data, total] = await Promise.all([
       this.prisma.presensi.findMany({
         where,
         skip,
-        take,
+        take: limit,
+        orderBy: { tanggalPresensi: 'desc' },
         include: {
           karyawan: {
             select: {
-              idKaryawan: true,
-              nik: true,
               nama: true,
-              email: true,
+              nik: true,
+              jabatan: {
+                select: {
+                  namaJabatan: true,
+                  departemen: {
+                    select: {
+                      namaDepartemen: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
-        orderBy: { tanggalPresensi: 'desc' },
       }),
       this.prisma.presensi.count({ where }),
     ]);
 
-    return createPaginatedResponse(data, total, page, limit);
-  }
+    // Calculate total pages
+    const totalPages = Math.ceil(total / limit);
 
-  async findOne(id: string) {
-    const presensi = await this.prisma.presensi.findUnique({
-      where: { idPresensi: id },
-      include: {
-        karyawan: {
-          select: {
-            idKaryawan: true,
-            nik: true,
-            nama: true,
-            email: true,
-          },
-        },
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
       },
-    });
-
-    if (!presensi) {
-      throw new NotFoundException(`Presensi dengan ID ${id} tidak ditemukan`);
-    }
-
-    return presensi;
+    };
   }
 
   async findByKaryawan(idKaryawan: string, month?: number, year?: number) {
     const where: any = { idKaryawan };
 
+    // Filter by month and year if provided
     if (month && year) {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
@@ -278,46 +257,14 @@ export class PresensiService {
     return this.prisma.presensi.findMany({
       where,
       orderBy: { tanggalPresensi: 'desc' },
-    });
-  }
-
-  async update(id: string, updateDto: UpdatePresensiDto) {
-    await this.findOne(id);
-
-    const updateData: any = {};
-
-    if (updateDto.waktuClockOut) {
-      updateData.waktuClockOut = new Date(updateDto.waktuClockOut);
-    }
-    if (updateDto.statusKehadiran)
-      updateData.statusKehadiran = updateDto.statusKehadiran;
-    if (updateDto.keterangan !== undefined)
-      updateData.keterangan = updateDto.keterangan;
-    if (updateDto.lokasiClockOut !== undefined)
-      updateData.lokasiClockOut = updateDto.lokasiClockOut;
-    if (updateDto.fotoClockOut !== undefined)
-      updateData.fotoClockOut = updateDto.fotoClockOut;
-
-    return this.prisma.presensi.update({
-      where: { idPresensi: id },
-      data: updateData,
       include: {
         karyawan: {
           select: {
-            idKaryawan: true,
-            nik: true,
             nama: true,
+            nik: true,
           },
         },
       },
-    });
-  }
-
-  async remove(id: string) {
-    await this.findOne(id);
-
-    return this.prisma.presensi.delete({
-      where: { idPresensi: id },
     });
   }
 
@@ -335,31 +282,87 @@ export class PresensiService {
       },
     });
 
+    // Hitung summary
     const summary = {
       totalHari: presensiList.length,
-      hadir: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.HADIR,
-      ).length,
-      izin: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.IZIN,
-      ).length,
-      sakit: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.SAKIT,
-      ).length,
-      alpa: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.ALPA,
-      ).length,
-      cuti: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.CUTI,
-      ).length,
-      libur: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.LIBUR,
-      ).length,
-      dinasLuar: presensiList.filter(
-        (p) => p.statusKehadiran === StatusKehadiran.DINAS_LUAR,
-      ).length,
+      hadir: presensiList.filter((p) => p.statusKehadiran === 'hadir').length,
+      izin: presensiList.filter((p) => p.statusKehadiran === 'izin').length,
+      sakit: presensiList.filter((p) => p.statusKehadiran === 'sakit').length,
+      alpa: presensiList.filter((p) => p.statusKehadiran === 'alpa').length,
+      cuti: presensiList.filter((p) => p.statusKehadiran === 'cuti').length,
+      libur: presensiList.filter((p) => p.statusKehadiran === 'libur').length,
+      dinasLuar: presensiList.filter((p) => p.statusKehadiran === 'dinas_luar')
+        .length,
     };
 
-    return summary;
+    return {
+      month,
+      year,
+      summary,
+      details: presensiList,
+    };
+  }
+
+  async findOne(id: string) {
+    const presensi = await this.prisma.presensi.findUnique({
+      where: { idPresensi: id },
+      include: {
+        karyawan: {
+          select: {
+            nama: true,
+            nik: true,
+            jabatan: {
+              select: {
+                namaJabatan: true,
+                departemen: {
+                  select: {
+                    namaDepartemen: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!presensi) {
+      throw new NotFoundException('Presensi tidak ditemukan');
+    }
+
+    return presensi;
+  }
+
+  async update(id: string, updateDto: UpdatePresensiDto) {
+    await this.findOne(id); // Validasi apakah ada
+
+    return this.prisma.presensi.update({
+      where: { idPresensi: id },
+      data: {
+        waktuClockOut: updateDto.waktuClockOut
+          ? new Date(updateDto.waktuClockOut)
+          : undefined,
+        statusKehadiran: updateDto.statusKehadiran,
+        keterangan: updateDto.keterangan,
+        lokasiClockOut: updateDto.lokasiClockOut,
+        fotoClockOut: updateDto.fotoClockOut,
+      },
+      include: {
+        karyawan: {
+          select: {
+            nama: true,
+            nik: true,
+          },
+        },
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id); // Validasi apakah ada
+
+    return this.prisma.presensi.delete({
+      where: { idPresensi: id },
+    });
   }
 }
