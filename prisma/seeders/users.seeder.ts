@@ -4,20 +4,30 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-export async function seedUsers() {
-  console.log('👤 STEP 6: Creating Sample Users & Karyawan...\n');
+export async function seedLogisticsUsers() {
+  console.log('📝 Creating Sample Logistics Users...\n');
 
   // ===== 1. GET REQUIRED DATA =====
   const hrDept = await prisma.refDepartemen.findFirst({
     where: { namaDepartemen: 'Human Resource' },
   });
 
-  const itDept = await prisma.refDepartemen.findFirst({
-    where: { namaDepartemen: 'Information Technology' },
+  const opsDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Operations' },
   });
 
-  if (!hrDept || !itDept) {
-    throw new Error('Required departments not found. Run seed.ts first!');
+  const transportDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Transportation' },
+  });
+
+  const warehouseDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Warehouse' },
+  });
+
+  if (!hrDept || !opsDept || !transportDept || !warehouseDept) {
+    throw new Error(
+      'Required departments not found. Make sure seedLogisticsDepartments() ran successfully!',
+    );
   }
 
   // Get jabatan
@@ -28,15 +38,36 @@ export async function seedUsers() {
     },
   });
 
-  const backendDevJabatan = await prisma.refJabatan.findFirst({
+  const opsManagerJabatan = await prisma.refJabatan.findFirst({
     where: {
-      namaJabatan: 'Backend Developer',
-      idDepartemen: itDept.idDepartemen,
+      namaJabatan: 'Operations Manager',
+      idDepartemen: opsDept.idDepartemen,
     },
   });
 
-  if (!hrManagerJabatan || !backendDevJabatan) {
-    throw new Error('Required jabatan not found. Run seed.ts first!');
+  const driverJabatan = await prisma.refJabatan.findFirst({
+    where: {
+      namaJabatan: 'Heavy Truck Driver',
+      idDepartemen: transportDept.idDepartemen,
+    },
+  });
+
+  const warehouseJabatan = await prisma.refJabatan.findFirst({
+    where: {
+      namaJabatan: 'Warehouse Staff',
+      idDepartemen: warehouseDept.idDepartemen,
+    },
+  });
+
+  if (
+    !hrManagerJabatan ||
+    !opsManagerJabatan ||
+    !driverJabatan ||
+    !warehouseJabatan
+  ) {
+    throw new Error(
+      'Required jabatan not found. Make sure seedLogisticsDepartments() ran successfully!',
+    );
   }
 
   // Get roles
@@ -48,75 +79,34 @@ export async function seedUsers() {
     where: { namaRole: 'HRD' },
   });
 
-  const karyawanRole = await prisma.refRole.findFirst({
-    where: { namaRole: 'Karyawan' },
+  const opsManagerRole = await prisma.refRole.findFirst({
+    where: { namaRole: 'Operations Manager' },
   });
 
-  if (!superadminRole || !hrdRole || !karyawanRole) {
-    throw new Error('Required roles not found. Run seed.ts first!');
+  const driverRole = await prisma.refRole.findFirst({
+    where: { namaRole: 'Driver' },
+  });
+
+  const warehouseRole = await prisma.refRole.findFirst({
+    where: { namaRole: 'Warehouse Staff' },
+  });
+
+  if (
+    !superadminRole ||
+    !hrdRole ||
+    !opsManagerRole ||
+    !driverRole ||
+    !warehouseRole
+  ) {
+    throw new Error(
+      'Required roles not found. Make sure seedRoles() ran successfully!',
+    );
   }
 
   console.log('═══════════════════════════════════════════════════════════');
   console.log('📝 Creating Sample Karyawan & Users...\n');
 
-  // ===== 2. CREATE KARYAWAN 1: HRD Manager (Admin) =====
-  let karyawanAdmin = await prisma.refKaryawan.findUnique({
-    where: { nik: 'HRD001' },
-  });
-
-  if (!karyawanAdmin) {
-    console.log('   → Creating HRD Manager karyawan...');
-    karyawanAdmin = await prisma.refKaryawan.create({
-      data: {
-        nik: 'HRD001',
-        nama: 'Sarah Anderson',
-        tempatLahir: 'Jakarta',
-        tanggalLahir: new Date('1985-03-15'),
-        jenisKelamin: 'P',
-        statusPernikahan: 'menikah',
-        agama: 'Islam',
-        noHpPribadi: '081234567890',
-        email: 'sarah.anderson@company.com',
-        idJabatan: hrManagerJabatan.idJabatan,
-        tanggalMasuk: new Date('2020-01-01'),
-        status: 'aktif',
-        statusKeaktifan: true,
-      },
-    });
-    console.log('     ✅ Karyawan created: Sarah Anderson (HRD Manager)');
-  } else {
-    console.log('     ✅ Karyawan already exists: Sarah Anderson');
-  }
-
-  // ===== 3. CREATE USER FOR HRD MANAGER =====
-  let adminUser = await prisma.user.findUnique({
-    where: { username: 'admin' },
-  });
-
-  if (!adminUser) {
-    console.log('   → Creating admin user account...');
-    const passwordHash = await bcrypt.hash('admin123', 10);
-
-    adminUser = await prisma.user.create({
-      data: {
-        username: 'admin',
-        email: 'sarah.anderson@company.com',
-        passwordHash,
-        idKaryawan: karyawanAdmin.idKaryawan,
-        useDepartmentRole: true, // Use HRD role from department
-        isActive: true,
-      },
-    });
-
-    console.log('     ✅ User created:');
-    console.log('        Username: admin');
-    console.log('        Password: admin123');
-    console.log('        Role: HRD (from department)\n');
-  } else {
-    console.log('     ✅ User already exists: admin\n');
-  }
-
-  // ===== 4. CREATE SUPERADMIN USER (No Karyawan) =====
+  // ===== 2. CREATE SUPERADMIN USER (No Karyawan) =====
   let superadminUser = await prisma.user.findUnique({
     where: { username: 'superadmin' },
   });
@@ -128,14 +118,13 @@ export async function seedUsers() {
     superadminUser = await prisma.user.create({
       data: {
         username: 'superadmin',
-        email: 'superadmin@company.com',
+        email: 'superadmin@logistics.com',
         passwordHash,
-        useDepartmentRole: false, // Use custom role
+        useDepartmentRole: false,
         isActive: true,
       },
     });
 
-    // Assign Superadmin role
     await prisma.userRole.create({
       data: {
         idUser: superadminUser.idUser,
@@ -146,73 +135,244 @@ export async function seedUsers() {
     console.log('     ✅ User created:');
     console.log('        Username: superadmin');
     console.log('        Password: super123');
-    console.log('        Role: Superadmin (custom role)\n');
+    console.log('        Role: Superadmin (Level 1)\n');
   } else {
     console.log('     ✅ User already exists: superadmin\n');
   }
 
-  // ===== 5. CREATE KARYAWAN 2: Backend Developer =====
-  let karyawanDev = await prisma.refKaryawan.findUnique({
-    where: { nik: 'IT001' },
+  // ===== 3. CREATE KARYAWAN 1: HR Manager =====
+  let karyawanHRD = await prisma.refKaryawan.findUnique({
+    where: { nik: 'HRD001' },
   });
 
-  if (!karyawanDev) {
-    console.log('   → Creating Backend Developer karyawan...');
-    karyawanDev = await prisma.refKaryawan.create({
+  if (!karyawanHRD) {
+    console.log('   → Creating HR Manager karyawan...');
+    karyawanHRD = await prisma.refKaryawan.create({
       data: {
-        nik: 'IT001',
-        nama: 'John Smith',
-        tempatLahir: 'Bandung',
-        tanggalLahir: new Date('1995-08-20'),
-        jenisKelamin: 'L',
-        statusPernikahan: 'belum_menikah',
-        agama: 'Kristen',
-        noHpPribadi: '081298765432',
-        email: 'john.smith@company.com',
-        idJabatan: backendDevJabatan.idJabatan,
-        tanggalMasuk: new Date('2023-06-01'),
+        nik: 'HRD001',
+        nama: 'Sarah Anderson',
+        tempatLahir: 'Jakarta',
+        tanggalLahir: new Date('1985-03-15'),
+        jenisKelamin: 'P',
+        statusPernikahan: 'menikah',
+        agama: 'Islam',
+        noHpPribadi: '081234567890',
+        email: 'sarah.anderson@logistics.com',
+        idJabatan: hrManagerJabatan.idJabatan,
+        tanggalMasuk: new Date('2020-01-01'),
         status: 'aktif',
         statusKeaktifan: true,
       },
     });
-    console.log('     ✅ Karyawan created: John Smith (Backend Developer)');
+    console.log('     ✅ Karyawan created: Sarah Anderson (HR Manager)');
   } else {
-    console.log('     ✅ Karyawan already exists: John Smith');
+    console.log('     ✅ Karyawan already exists: Sarah Anderson');
   }
 
-  // ===== 6. CREATE USER FOR BACKEND DEVELOPER =====
-  let devUser = await prisma.user.findUnique({
-    where: { username: 'john.smith' },
+  // CREATE USER FOR HR MANAGER
+  let hrdUser = await prisma.user.findUnique({
+    where: { username: 'hrd.admin' },
   });
 
-  if (!devUser) {
-    console.log('   → Creating john.smith user account...');
-    const passwordHash = await bcrypt.hash('john123', 10);
+  if (!hrdUser) {
+    console.log('   → Creating hrd.admin user account...');
+    const passwordHash = await bcrypt.hash('hrd123', 10);
 
-    devUser = await prisma.user.create({
+    hrdUser = await prisma.user.create({
       data: {
-        username: 'john.smith',
-        email: 'john.smith@company.com',
+        username: 'hrd.admin',
+        email: 'sarah.anderson@logistics.com',
         passwordHash,
-        idKaryawan: karyawanDev.idKaryawan,
+        idKaryawan: karyawanHRD.idKaryawan,
         useDepartmentRole: true,
         isActive: true,
       },
     });
 
     console.log('     ✅ User created:');
-    console.log('        Username: john.smith');
-    console.log('        Password: john123');
-    console.log('        Role: Karyawan (from IT department)\n');
+    console.log('        Username: hrd.admin');
+    console.log('        Password: hrd123');
+    console.log('        Role: HRD (from department)\n');
   } else {
-    console.log('     ✅ User already exists: john.smith\n');
+    console.log('     ✅ User already exists: hrd.admin\n');
+  }
+
+  // ===== 4. CREATE KARYAWAN 2: Operations Manager =====
+  let karyawanOps = await prisma.refKaryawan.findUnique({
+    where: { nik: 'OPS001' },
+  });
+
+  if (!karyawanOps) {
+    console.log('   → Creating Operations Manager karyawan...');
+    karyawanOps = await prisma.refKaryawan.create({
+      data: {
+        nik: 'OPS001',
+        nama: 'Michael Chen',
+        tempatLahir: 'Surabaya',
+        tanggalLahir: new Date('1982-07-20'),
+        jenisKelamin: 'L',
+        statusPernikahan: 'menikah',
+        agama: 'Buddha',
+        noHpPribadi: '081298765432',
+        email: 'michael.chen@logistics.com',
+        idJabatan: opsManagerJabatan.idJabatan,
+        tanggalMasuk: new Date('2018-03-01'),
+        status: 'aktif',
+        statusKeaktifan: true,
+      },
+    });
+    console.log('     ✅ Karyawan created: Michael Chen (Operations Manager)');
+  } else {
+    console.log('     ✅ Karyawan already exists: Michael Chen');
+  }
+
+  // CREATE USER FOR OPS MANAGER
+  let opsUser = await prisma.user.findUnique({
+    where: { username: 'ops.manager' },
+  });
+
+  if (!opsUser) {
+    console.log('   → Creating ops.manager user account...');
+    const passwordHash = await bcrypt.hash('ops123', 10);
+
+    opsUser = await prisma.user.create({
+      data: {
+        username: 'ops.manager',
+        email: 'michael.chen@logistics.com',
+        passwordHash,
+        idKaryawan: karyawanOps.idKaryawan,
+        useDepartmentRole: true,
+        isActive: true,
+      },
+    });
+
+    console.log('     ✅ User created:');
+    console.log('        Username: ops.manager');
+    console.log('        Password: ops123');
+    console.log('        Role: Operations Manager (from department)\n');
+  } else {
+    console.log('     ✅ User already exists: ops.manager\n');
+  }
+
+  // ===== 5. CREATE KARYAWAN 3: Driver =====
+  let karyawanDriver = await prisma.refKaryawan.findUnique({
+    where: { nik: 'DRV001' },
+  });
+
+  if (!karyawanDriver) {
+    console.log('   → Creating Driver karyawan...');
+    karyawanDriver = await prisma.refKaryawan.create({
+      data: {
+        nik: 'DRV001',
+        nama: 'Budi Santoso',
+        tempatLahir: 'Bandung',
+        tanggalLahir: new Date('1990-05-10'),
+        jenisKelamin: 'L',
+        statusPernikahan: 'menikah',
+        agama: 'Islam',
+        noHpPribadi: '081234509876',
+        email: 'budi.santoso@logistics.com',
+        idJabatan: driverJabatan.idJabatan,
+        tanggalMasuk: new Date('2021-08-15'),
+        status: 'aktif',
+        statusKeaktifan: true,
+      },
+    });
+    console.log('     ✅ Karyawan created: Budi Santoso (Heavy Truck Driver)');
+  } else {
+    console.log('     ✅ Karyawan already exists: Budi Santoso');
+  }
+
+  // CREATE USER FOR DRIVER
+  let driverUser = await prisma.user.findUnique({
+    where: { username: 'driver1' },
+  });
+
+  if (!driverUser) {
+    console.log('   → Creating driver1 user account...');
+    const passwordHash = await bcrypt.hash('driver123', 10);
+
+    driverUser = await prisma.user.create({
+      data: {
+        username: 'driver1',
+        email: 'budi.santoso@logistics.com',
+        passwordHash,
+        idKaryawan: karyawanDriver.idKaryawan,
+        useDepartmentRole: true,
+        isActive: true,
+      },
+    });
+
+    console.log('     ✅ User created:');
+    console.log('        Username: driver1');
+    console.log('        Password: driver123');
+    console.log('        Role: Driver (from department)\n');
+  } else {
+    console.log('     ✅ User already exists: driver1\n');
+  }
+
+  // ===== 6. CREATE KARYAWAN 4: Warehouse Staff =====
+  let karyawanWarehouse = await prisma.refKaryawan.findUnique({
+    where: { nik: 'WH001' },
+  });
+
+  if (!karyawanWarehouse) {
+    console.log('   → Creating Warehouse Staff karyawan...');
+    karyawanWarehouse = await prisma.refKaryawan.create({
+      data: {
+        nik: 'WH001',
+        nama: 'Andi Wijaya',
+        tempatLahir: 'Semarang',
+        tanggalLahir: new Date('1995-11-25'),
+        jenisKelamin: 'L',
+        statusPernikahan: 'belum_menikah',
+        agama: 'Kristen',
+        noHpPribadi: '081298760001',
+        email: 'andi.wijaya@logistics.com',
+        idJabatan: warehouseJabatan.idJabatan,
+        tanggalMasuk: new Date('2022-02-10'),
+        status: 'aktif',
+        statusKeaktifan: true,
+      },
+    });
+    console.log('     ✅ Karyawan created: Andi Wijaya (Warehouse Staff)');
+  } else {
+    console.log('     ✅ Karyawan already exists: Andi Wijaya');
+  }
+
+  // CREATE USER FOR WAREHOUSE STAFF
+  let warehouseUser = await prisma.user.findUnique({
+    where: { username: 'warehouse1' },
+  });
+
+  if (!warehouseUser) {
+    console.log('   → Creating warehouse1 user account...');
+    const passwordHash = await bcrypt.hash('warehouse123', 10);
+
+    warehouseUser = await prisma.user.create({
+      data: {
+        username: 'warehouse1',
+        email: 'andi.wijaya@logistics.com',
+        passwordHash,
+        idKaryawan: karyawanWarehouse.idKaryawan,
+        useDepartmentRole: true,
+        isActive: true,
+      },
+    });
+
+    console.log('     ✅ User created:');
+    console.log('        Username: warehouse1');
+    console.log('        Password: warehouse123');
+    console.log('        Role: Warehouse Staff (from department)\n');
+  } else {
+    console.log('     ✅ User already exists: warehouse1\n');
   }
 
   console.log('═══════════════════════════════════════════════════════════\n');
   console.log('📊 SAMPLE USERS SUMMARY:');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('   ✅ Karyawan created:  2');
-  console.log('   ✅ Users created:     3');
+  console.log('   ✅ Karyawan created:  4');
+  console.log('   ✅ Users created:     5');
   console.log('═══════════════════════════════════════════════════════════\n');
 
   console.log('📝 LOGIN CREDENTIALS:');
@@ -222,23 +382,35 @@ export async function seedUsers() {
   console.log('      Password: super123');
   console.log('      Role:     Superadmin (Level 1)\n');
 
-  console.log('   2. Admin HRD (HR Manager):');
-  console.log('      Username: admin');
-  console.log('      Password: admin123');
+  console.log('   2. HRD Manager:');
+  console.log('      Username: hrd.admin');
+  console.log('      Password: hrd123');
   console.log('      Role:     HRD (Level 2)');
   console.log('      Karyawan: Sarah Anderson\n');
 
-  console.log('   3. Regular Employee (Backend Dev):');
-  console.log('      Username: john.smith');
-  console.log('      Password: john123');
-  console.log('      Role:     Karyawan (Level 4)');
-  console.log('      Karyawan: John Smith\n');
+  console.log('   3. Operations Manager:');
+  console.log('      Username: ops.manager');
+  console.log('      Password: ops123');
+  console.log('      Role:     Operations Manager (Level 3)');
+  console.log('      Karyawan: Michael Chen\n');
+
+  console.log('   4. Heavy Truck Driver:');
+  console.log('      Username: driver1');
+  console.log('      Password: driver123');
+  console.log('      Role:     Driver (Level 4)');
+  console.log('      Karyawan: Budi Santoso\n');
+
+  console.log('   5. Warehouse Staff:');
+  console.log('      Username: warehouse1');
+  console.log('      Password: warehouse123');
+  console.log('      Role:     Warehouse Staff (Level 4)');
+  console.log('      Karyawan: Andi Wijaya\n');
   console.log('═══════════════════════════════════════════════════════════\n');
 }
 
 // If run directly
 if (require.main === module) {
-  seedUsers()
+  seedLogisticsUsers()
     .catch((e) => {
       console.error('❌ Error seeding users:', e);
       process.exit(1);

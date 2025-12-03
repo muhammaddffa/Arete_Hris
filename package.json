@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:roles": "ts-node prisma/seeders/role.seeder.ts",
     "seed:permissions": "ts-node prisma/seeders/permission.seeder.ts",
-    "seed:all": "npm run seed:roles && npm run seed:permissions && npm run seed:users",
+    "seed:departments": "ts-node prisma/seeders/departments.seeder.ts",
+    "seed:all": "npm run seed:roles && npm run seed:permissions && npm run seed:departments && npm run seed:users",
     "seed:users": "ts-node prisma/seeders/users.seeder.ts"
   },
   "dependencies": {
