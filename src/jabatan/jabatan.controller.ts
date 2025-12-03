@@ -27,7 +27,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 
 @ApiTags('Jabatan')
 @Controller('jabatan')
-@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class JabatanController {
   constructor(private readonly jabatanService: JabatanService) {}

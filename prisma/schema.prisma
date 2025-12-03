@@ -126,6 +126,7 @@ model User {
   email             String    @unique @db.VarChar(100)
   passwordHash      String    @map("password_hash") @db.VarChar(255)
   useDepartmentRole Boolean   @default(true) @map("use_department_role")
+  mustChangePassword Boolean  @default(true) @map("must_change_password")
   isActive          Boolean   @default(true) @map("is_active")
   lastLogin         DateTime? @map("last_login")
   loginAttempts     Int       @default(0) @map("login_attempts")

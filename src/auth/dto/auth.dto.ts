@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // src/auth/dto/auth.dto.ts
 import {
   IsString,
@@ -8,6 +9,8 @@ import {
   IsOptional,
   IsArray,
   IsInt,
+  ValidateIf,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -37,7 +40,7 @@ export class CreateUserAccountDto {
     example: 'uuid-karyawan',
     description: 'ID Karyawan yang akan dibuat akun',
   })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   idKaryawan: string;
 
@@ -54,13 +57,14 @@ export class CreateUserAccountDto {
 
   @ApiProperty({
     example: [2, 3],
-    description: 'Array ID Role (jika useDepartmentRole = false)',
+    description: 'Array ID Role (WAJIB jika useDepartmentRole = false)',
     required: false,
   })
+  @ValidateIf((o) => o.useDepartmentRole === false)
   @IsArray()
   @IsInt({ each: true })
   @Type(() => Number)
-  @IsOptional()
+  @IsNotEmpty()
   customRoles?: number[];
 }
 
@@ -91,7 +95,7 @@ export class ChangePasswordDto {
 
 export class AssignRoleDto {
   @ApiProperty({ example: 'uuid-user' })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   idUser: string;
 
@@ -105,7 +109,7 @@ export class AssignRoleDto {
 
 export class AdminResetPasswordDto {
   @ApiProperty({ example: 'uuid-user' })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   idUser: string;
 

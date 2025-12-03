@@ -1,46 +1,47 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { JwtPayload } from '../types/auth.types';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private configService: ConfigService,
-    private prisma: PrismaService,
-  ) {
+  constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'your-secret-key',
+      secretOrKey: process.env.JWT_SECRET || 'your-secret-key',
     });
   }
 
-  async validate(payload: any) {
-    // Payload from JWT token
-    // { sub, username, email, idKaryawan, roles, permissions }
-
-    // Optional: Verify user still exists and is active
+  async validate(payload: JwtPayload) {
+    // Payload dari JWT token
     const user = await this.prisma.user.findUnique({
       where: { idUser: payload.sub },
+      include: {
+        karyawan: true,
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
     });
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User tidak aktif atau tidak ditemukan');
     }
 
-    // Return payload to be attached to request.user
+    // ✅ Return data yang akan dimasukkan ke request.user
+    // Data ini sudah ada di JWT payload
     return {
-      sub: payload.sub,
+      idUser: payload.sub,
       username: payload.username,
       email: payload.email,
-      idKaryawan: payload.idKaryawan,
+      idKaryawan: payload.idKaryawan || null,
       roles: payload.roles,
       permissions: payload.permissions,
-      mustChangePassword: payload.mustChangePassword,
+      useDepartmentRole: user.useDepartmentRole,
     };
   }
 }
