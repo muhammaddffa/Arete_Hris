@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/karyawan/karyawan.controller.ts
-
 import {
   Controller,
   Post,
@@ -40,7 +38,7 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @ApiTags('Karyawan')
 @Controller('karyawan')
-@UseGuards(JwtAuthGuard) // Semua endpoint harus login
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class KaryawanController {
   constructor(

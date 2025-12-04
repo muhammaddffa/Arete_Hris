@@ -92,8 +92,6 @@ export class AuthController {
     return ResponseUtil.success(result, 'Password berhasil diubah');
   }
 
-  // ==================== ADMIN ONLY ROUTES ====================
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(1, 2)
   @Post('create-account')
