@@ -122,9 +122,6 @@ export class DepartmentController {
     return ResponseUtil.success(results, 'Autocomplete results');
   }
 
-  // ==========================================
-  // NEW: GET ALL STATS
-  // ==========================================
   @Get('stats/summary')
   @ApiOperation({ summary: 'Get all departments statistics summary' })
   @ApiResponse({

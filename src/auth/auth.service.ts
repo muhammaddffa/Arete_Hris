@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-// src/auth/auth.service.ts
-
 import {
   Injectable,
   UnauthorizedException,
@@ -37,7 +35,6 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // ===== HELPER: GET ROLES & PERMISSIONS =====
   private async getRolesAndPermissions(
     user: UserWithRelations,
   ): Promise<RolesAndPermissions> {
@@ -46,8 +43,6 @@ export class AuthService {
 
     try {
       if (user.useDepartmentRole) {
-        // ✅ USE DEPARTMENT DEFAULT ROLE
-
         if (!user.karyawan) {
           console.warn('⚠️ User has no karyawan linked');
           return { roles, permissions };
@@ -87,8 +82,6 @@ export class AuthService {
 
         roles.push(dept.roleDefault as Role);
       } else {
-        // ✅ USE CUSTOM ROLES
-
         if (!user.userRoles || user.userRoles.length === 0) {
           console.warn('⚠️ User has no custom roles assigned');
           return { roles, permissions };
@@ -99,7 +92,7 @@ export class AuthService {
         });
       }
 
-      // ✅ COLLECT PERMISSIONS
+      // Aggregate permissions
       const permissionSet = new Set<string>();
 
       roles.forEach((role) => {

@@ -165,7 +165,7 @@ export async function seedPermissions() {
   ];
 
   let created = 0;
-  let updated = 0; // ← DIPERBAIKI: tambahkan deklarasi variabel
+  let updated = 0;
 
   for (const permission of permissions) {
     const existing = await prisma.refPermission.findUnique({
@@ -191,7 +191,6 @@ export async function seedPermissions() {
   console.log(`   - Updated: ${updated}`);
   console.log(`   - Total: ${permissions.length}\n`);
 
-  // Display summary
   console.log('📋 Permission Categories:');
   console.log('   - Karyawan Management:    7 permissions');
   console.log('   - User & Auth:            5 permissions');

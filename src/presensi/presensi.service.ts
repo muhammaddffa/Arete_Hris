@@ -18,7 +18,6 @@ import {
 export class PresensiService {
   constructor(private prisma: PrismaService) {}
 
-  // ===== 1. CREATE MANUAL (HRD Only) =====
   async create(createDto: CreatePresensiDto) {
     // Validasi: Cek apakah karyawan ada
     const karyawan = await this.prisma.refKaryawan.findUnique({

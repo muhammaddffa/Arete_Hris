@@ -38,7 +38,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Presensi')
 @Controller('presensi')
-@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class PresensiController {
   constructor(private readonly presensiService: PresensiService) {}
@@ -46,7 +46,7 @@ export class PresensiController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_presensi') // ✅ Hanya HRD bisa buat manual
+  @RequirePermissions('manage_presensi')
   @ApiOperation({ summary: 'Buat presensi manual (HRD only)' })
   @ApiResponse({ status: 201, description: 'Presensi berhasil dibuat' })
   async create(@Body() createDto: CreatePresensiDto) {

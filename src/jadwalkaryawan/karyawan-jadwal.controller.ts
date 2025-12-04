@@ -30,7 +30,7 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @ApiTags('Karyawan Jadwal')
 @Controller('karyawan-jadwal')
-@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class KaryawanJadwalController {
   constructor(private readonly karyawanJadwalService: KaryawanJadwalService) {}

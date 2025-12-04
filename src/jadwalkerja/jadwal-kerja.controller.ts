@@ -29,12 +29,11 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @ApiTags('Jadwal Kerja')
 @Controller('jadwal-kerja')
-@UseGuards(JwtAuthGuard) // ✅ Semua endpoint harus login
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class JadwalKerjaController {
   constructor(private readonly jadwalKerjaService: JadwalKerjaService) {}
 
-  // CREATE - Hanya HRD
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(PermissionsGuard)
@@ -49,7 +48,6 @@ export class JadwalKerjaController {
     );
   }
 
-  // GET ALL - Semua yang login
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get semua jadwal kerja' })
@@ -62,7 +60,6 @@ export class JadwalKerjaController {
     );
   }
 
-  // GET STATISTICS - HRD & Manager
   @Get('statistics')
   @HttpCode(HttpStatus.OK)
   @UseGuards(PermissionsGuard)

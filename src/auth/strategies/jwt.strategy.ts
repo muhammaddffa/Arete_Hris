@@ -32,7 +32,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User tidak aktif atau tidak ditemukan');
     }
 
-    // ✅ Return data yang akan dimasukkan ke request.user
     // Data ini sudah ada di JWT payload
     return {
       idUser: payload.sub,
