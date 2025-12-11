@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -44,12 +46,14 @@ export class JabatanService {
           select: {
             idDepartemen: true,
             namaDepartemen: true,
-            roleDefault: {
-              select: {
-                idRole: true,
-                namaRole: true,
-              },
-            },
+            deskripsi: true,
+          },
+        },
+        roleDefault: {
+          select: {
+            idRole: true,
+            namaRole: true,
+            level: true,
           },
         },
       },
@@ -63,7 +67,6 @@ export class JabatanService {
     const where: any = {};
 
     if (search) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       where.namaJabatan = {
         contains: search,
         mode: 'insensitive',
@@ -71,18 +74,15 @@ export class JabatanService {
     }
 
     if (idDepartemen) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       where.idDepartemen = idDepartemen;
     }
 
     if (status !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       where.status = status;
     }
 
     const [data, total] = await Promise.all([
       this.prisma.refJabatan.findMany({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         where,
         skip,
         take: limit,
@@ -91,12 +91,14 @@ export class JabatanService {
             select: {
               idDepartemen: true,
               namaDepartemen: true,
-              roleDefault: {
-                select: {
-                  idRole: true,
-                  namaRole: true,
-                },
-              },
+              deskripsi: true,
+            },
+          },
+          roleDefault: {
+            select: {
+              idRole: true,
+              namaRole: true,
+              level: true,
             },
           },
           _count: {
@@ -109,7 +111,6 @@ export class JabatanService {
           createdAt: 'desc',
         },
       }),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.prisma.refJabatan.count({ where }),
     ]);
 
@@ -137,13 +138,13 @@ export class JabatanService {
             idDepartemen: true,
             namaDepartemen: true,
             deskripsi: true,
-            roleDefault: {
-              select: {
-                idRole: true,
-                namaRole: true,
-                level: true,
-              },
-            },
+          },
+        },
+        roleDefault: {
+          select: {
+            idRole: true,
+            namaRole: true,
+            level: true,
           },
         },
         _count: {
@@ -199,12 +200,14 @@ export class JabatanService {
           select: {
             idDepartemen: true,
             namaDepartemen: true,
-            roleDefault: {
-              select: {
-                idRole: true,
-                namaRole: true,
-              },
-            },
+            deskripsi: true,
+          },
+        },
+        roleDefault: {
+          select: {
+            idRole: true,
+            namaRole: true,
+            level: true,
           },
         },
       },
@@ -272,6 +275,19 @@ export class JabatanService {
         status: true,
       },
       include: {
+        departemen: {
+          select: {
+            idDepartemen: true,
+            namaDepartemen: true,
+          },
+        },
+        roleDefault: {
+          select: {
+            idRole: true,
+            namaRole: true,
+            level: true,
+          },
+        },
         _count: {
           select: {
             karyawan: true,

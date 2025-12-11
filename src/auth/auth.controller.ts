@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -23,7 +25,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { AuthService } from '../auth/auth.service';
 import {
   CreateUserAccountDto,
   LoginDto,
@@ -51,7 +53,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login berhasil' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
-    const result = await this.authService.login(loginDto);
+    const { username, password } = loginDto;
+    const result = await this.authService.login(username, password);
     return ResponseUtil.success(result, 'Login berhasil');
   }
 
@@ -61,7 +64,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile' })
   async getProfile(@CurrentUser() user: any) {
-    const profile = await this.authService.getProfile(user.idUser);
+    const profile = await this.authService.getProfile(user.idKaryawan);
     return ResponseUtil.success(profile, 'Profile berhasil diambil');
   }
 
@@ -86,8 +89,9 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
     const result = await this.authService.changePassword(
-      user.idUser,
-      changePasswordDto,
+      user.idKaryawan,
+      changePasswordDto.oldPassword,
+      changePasswordDto.newPassword,
     );
     return ResponseUtil.success(result, 'Password berhasil diubah');
   }

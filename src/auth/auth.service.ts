@@ -1,32 +1,23 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
-  NotFoundException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { StatusKaryawan } from '@prisma/client';
 import {
-  CreateUserAccountDto,
-  LoginDto,
-  ChangePasswordDto,
-  AssignRoleDto,
   AdminResetPasswordDto,
+  AssignRoleDto,
+  CreateUserAccountDto,
 } from './dto/auth.dto';
-import {
-  Role,
-  RolesAndPermissions,
-  UserWithRelations,
-  LoginResponse,
-  CreateUserResponse,
-  RoleInfo,
-  JwtPayload,
-  ToggleUserStatusResponse,
-  GetAllUsersResponse,
-} from './types/auth.types';
 
 @Injectable()
 export class AuthService {
@@ -35,35 +26,18 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  private async getRolesAndPermissions(
-    user: UserWithRelations,
-  ): Promise<RolesAndPermissions> {
-    const roles: Role[] = [];
-    const permissions: string[] = [];
-
-    try {
-      if (user.useDepartmentRole) {
-        if (!user.karyawan) {
-          console.warn('⚠️ User has no karyawan linked');
-          return { roles, permissions };
-        }
-
-        if (!user.karyawan.jabatan) {
-          console.warn('⚠️ Karyawan has no jabatan linked');
-          return { roles, permissions };
-        }
-
-        if (!user.karyawan.jabatan.departemen) {
-          console.warn('⚠️ Jabatan has no departemen linked');
-          return { roles, permissions };
-        }
-
-        // Fetch department with role and permissions
-        const dept = await this.prisma.refDepartemen.findUnique({
-          where: {
-            idDepartemen: user.karyawan.jabatan.departemen.idDepartemen,
-          },
+  async login(username: string, password: string) {
+    // 1. Find karyawan by username
+    const karyawan = await this.prisma.refKaryawan.findUnique({
+      where: {
+        username,
+        status: StatusKaryawan.aktif,
+        statusKeaktifan: true,
+      },
+      include: {
+        jabatan: {
           include: {
+            departemen: true,
             roleDefault: {
               include: {
                 permissions: {
@@ -74,70 +48,353 @@ export class AuthService {
               },
             },
           },
-        });
+        },
+        karyawanRoles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        karyawanPermissionOverrides: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+    });
 
-        if (!dept?.roleDefault) {
-          throw new Error('Departemen tidak memiliki default role');
-        }
+    if (!karyawan) {
+      throw new UnauthorizedException('Username atau password salah');
+    }
 
-        roles.push(dept.roleDefault as Role);
-      } else {
-        if (!user.userRoles || user.userRoles.length === 0) {
-          console.warn('⚠️ User has no custom roles assigned');
-          return { roles, permissions };
-        }
-
-        user.userRoles.forEach((ur) => {
-          roles.push(ur.role as Role);
-        });
-      }
-
-      // Aggregate permissions
-      const permissionSet = new Set<string>();
-
-      roles.forEach((role) => {
-        if (role.permissions && Array.isArray(role.permissions)) {
-          role.permissions.forEach((rp) => {
-            if (rp.permission?.namaPermission) {
-              permissionSet.add(rp.permission.namaPermission);
-            }
-          });
-        }
-      });
-
-      return { roles, permissions: Array.from(permissionSet) };
-    } catch (error) {
-      console.error('❌ Error in getRolesAndPermissions:', error);
-      throw new BadRequestException(
-        `Gagal memuat roles dan permissions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    // 2. Check if account is locked
+    if (karyawan.lockedUntil && karyawan.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil(
+        (karyawan.lockedUntil.getTime() - Date.now()) / 60000,
+      );
+      throw new UnauthorizedException(
+        `Account terkunci. Coba lagi dalam ${minutesLeft} menit`,
       );
     }
+
+    // 3. Check if account is active
+    if (!karyawan.isActive) {
+      throw new UnauthorizedException('Account tidak aktif');
+    }
+
+    if (!karyawan?.passwordHash) {
+      throw new UnauthorizedException('Karyawan tidak ditemukan');
+    }
+
+    // 4. Verify password
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      karyawan.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      // Increment login attempts
+      const newAttempts = karyawan.loginAttempts + 1;
+      const updateData: any = {
+        loginAttempts: newAttempts,
+      };
+
+      // Lock account after 5 failed attempts
+      if (newAttempts >= 5) {
+        updateData.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 minutes
+        updateData.loginAttempts = 0;
+      }
+
+      await this.prisma.refKaryawan.update({
+        where: { idKaryawan: karyawan.idKaryawan },
+        data: updateData,
+      });
+
+      if (newAttempts >= 5) {
+        throw new UnauthorizedException(
+          'Account terkunci karena terlalu banyak percobaan login gagal',
+        );
+      }
+
+      throw new UnauthorizedException('Username atau password salah');
+    }
+
+    // 5. Get effective permissions
+    const effectivePermissions = this.calculateEffectivePermissions(karyawan);
+
+    // 6. Reset login attempts and update last login
+    await this.prisma.refKaryawan.update({
+      where: { idKaryawan: karyawan.idKaryawan },
+      data: {
+        loginAttempts: 0,
+        lockedUntil: null,
+        lastLogin: new Date(),
+      },
+    });
+
+    // 7. Get roles (dari jabatan atau custom)
+    const roles = karyawan.useJabatanRole
+      ? [karyawan.jabatan.roleDefault]
+      : karyawan.karyawanRoles.map((kr) => kr.role);
+
+    // 8. Generate JWT token
+    const payload = {
+      sub: karyawan.idKaryawan,
+      username: karyawan.username,
+      nik: karyawan.nik,
+      roles: roles.map((r) => r.namaRole),
+      permissions: effectivePermissions.map((p) => p.namaPermission),
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    return {
+      accessToken,
+      karyawan: {
+        idKaryawan: karyawan.idKaryawan,
+        nik: karyawan.nik,
+        nama: karyawan.nama,
+        username: karyawan.username,
+        email: karyawan.email,
+        pasfoto: karyawan.pasfoto,
+        jabatan: {
+          idJabatan: karyawan.jabatan.idJabatan,
+          namaJabatan: karyawan.jabatan.namaJabatan,
+          departemen: karyawan.jabatan.departemen,
+        },
+      },
+      roles: roles.map((r) => ({
+        idRole: r.idRole,
+        namaRole: r.namaRole,
+        level: r.level,
+      })),
+      permissions: effectivePermissions.map((p) => ({
+        idPermission: p.idPermission,
+        namaPermission: p.namaPermission,
+      })),
+    };
   }
 
-  // ===== HELPER: MAP ROLES TO INFO =====
-  private mapRolesToInfo(roles: Role[]): RoleInfo[] {
-    return roles.map((r) => ({
-      idRole: r.idRole,
-      namaRole: r.namaRole,
-      level: r.level,
-    }));
-  }
-
-  // ===== 1. CREATE USER ACCOUNT =====
-  async createUserAccount(
-    dto: CreateUserAccountDto,
-  ): Promise<CreateUserResponse> {
-    // Validasi karyawan
+  async changePassword(
+    idKaryawan: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
-      where: { idKaryawan: dto.idKaryawan },
+      where: { idKaryawan },
+    });
+
+    if (!karyawan?.passwordHash) {
+      throw new UnauthorizedException('Karyawan tidak ditemukan');
+    }
+
+    // Verify old password
+    const isOldPasswordValid = await bcrypt.compare(
+      oldPassword,
+      karyawan.passwordHash,
+    );
+    if (!isOldPasswordValid) {
+      throw new UnauthorizedException('Password lama salah');
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      throw new BadRequestException('Password harus minimal 8 karakter');
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.prisma.refKaryawan.update({
+      where: { idKaryawan },
+      data: {
+        passwordHash: newPasswordHash,
+      },
+    });
+
+    return { message: 'Password berhasil diubah' };
+  }
+
+  async adminResetPassword(dto: AdminResetPasswordDto) {
+    const { idKaryawan, newPassword } = dto;
+
+    if (newPassword.length < 8) {
+      throw new BadRequestException('Password harus minimal 8 karakter');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.refKaryawan.update({
+      where: { idKaryawan },
+      data: { passwordHash },
+    });
+
+    return { message: 'Password berhasil direset' };
+  }
+
+  async toggleUserStatus(idKaryawan: string) {
+    const user = await this.prisma.refKaryawan.findUnique({
+      where: { idKaryawan },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    const updated = await this.prisma.refKaryawan.update({
+      where: { idKaryawan },
+      data: { isActive: !user.isActive },
+    });
+
+    return updated;
+  }
+
+  async assignRoles(dto: AssignRoleDto) {
+    const { idKaryawan, idRoles } = dto;
+
+    await this.prisma.karyawanRole.deleteMany({
+      where: { idKaryawan },
+    });
+
+    await this.prisma.karyawanRole.createMany({
+      data: idRoles.map((idRole) => ({
+        idKaryawan,
+        idRole,
+      })),
+    });
+
+    return { message: 'Roles berhasil diperbarui' };
+  }
+
+  async createUserAccount(dto: CreateUserAccountDto) {
+    const { idKaryawan, username, password } = dto;
+
+    const existing = await this.prisma.refKaryawan.findUnique({
+      where: { username },
+    });
+    if (existing) {
+      throw new BadRequestException('Username sudah digunakan');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await this.prisma.refKaryawan.update({
+      where: { idKaryawan },
+      data: {
+        username,
+        passwordHash,
+        isActive: true,
+      },
+    });
+
+    return user;
+  }
+
+  async requestPasswordReset(username: string) {
+    const karyawan = await this.prisma.refKaryawan.findUnique({
+      where: { username, status: StatusKaryawan.aktif },
+    });
+
+    if (!karyawan) {
+      // Don't reveal if username exists or not
+      return {
+        message:
+          'Jika username terdaftar, link reset password akan dikirim ke email',
+      };
+    }
+
+    // Generate reset token
+    const resetToken = this.generateResetToken();
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.refKaryawan.update({
+      where: { idKaryawan: karyawan.idKaryawan },
+      data: {
+        resetToken,
+        resetTokenExpires,
+      },
+    });
+
+    // await this.emailService.sendPasswordResetEmail(karyawan.email, resetToken);
+    console.log(`Reset token for ${username}: ${resetToken}`);
+
+    return {
+      message:
+        'Jika username terdaftar, link reset password akan dikirim ke email',
+      // DEVELOPMENT ONLY - remove in production
+      dev_resetToken: resetToken,
+    };
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    const karyawan = await this.prisma.refKaryawan.findFirst({
+      where: {
+        resetToken,
+        resetTokenExpires: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!karyawan) {
+      throw new BadRequestException('Token tidak valid atau sudah kadaluarsa');
+    }
+
+    // Validate new password
+    if (newPassword.length < 8) {
+      throw new BadRequestException('Password harus minimal 8 karakter');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear reset token
+    await this.prisma.refKaryawan.update({
+      where: { idKaryawan: karyawan.idKaryawan },
+      data: {
+        passwordHash,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
+
+    return { message: 'Password berhasil direset' };
+  }
+
+  async getProfile(idKaryawan: string) {
+    const karyawan = await this.prisma.refKaryawan.findUnique({
+      where: { idKaryawan },
       include: {
         jabatan: {
           include: {
-            departemen: {
+            departemen: true,
+            roleDefault: true,
+          },
+        },
+        karyawanRoles: {
+          include: {
+            role: {
               include: {
-                roleDefault: true,
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
               },
             },
+          },
+        },
+        karyawanPermissionOverrides: {
+          include: {
+            permission: true,
           },
         },
       },
@@ -147,516 +404,150 @@ export class AuthService {
       throw new NotFoundException('Karyawan tidak ditemukan');
     }
 
-    if (!karyawan.jabatan) {
-      throw new BadRequestException(
-        'Karyawan tidak memiliki jabatan. Assign jabatan terlebih dahulu.',
-      );
-    }
+    const effectivePermissions = this.calculateEffectivePermissions(karyawan);
 
-    if (!karyawan.jabatan.departemen) {
-      throw new BadRequestException(
-        'Jabatan tidak memiliki departemen. Setup departemen terlebih dahulu.',
-      );
-    }
-
-    // Check existing user
-    const existingUser = await this.prisma.user.findFirst({
-      where: { idKaryawan: dto.idKaryawan },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Karyawan sudah memiliki akun');
-    }
-
-    // Check username & email
-    const userExists = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ username: dto.username }, { email: dto.email }],
-      },
-    });
-
-    if (userExists) {
-      throw new ConflictException('Username atau email sudah digunakan');
-    }
-
-    // Validate custom roles
-    if (!dto.useDepartmentRole) {
-      if (!dto.customRoles || dto.customRoles.length === 0) {
-        throw new BadRequestException(
-          'customRoles wajib diisi jika useDepartmentRole = false',
-        );
-      }
-
-      const rolesExist = await this.prisma.refRole.findMany({
-        where: { idRole: { in: dto.customRoles } },
-      });
-
-      if (rolesExist.length !== dto.customRoles.length) {
-        throw new BadRequestException('Beberapa role tidak valid');
-      }
-    }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-
-    // Create user
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email,
-        passwordHash,
-        idKaryawan: dto.idKaryawan,
-        useDepartmentRole: dto.useDepartmentRole ?? true,
-      },
-    });
-
-    // Assign custom roles if needed
-    if (!dto.useDepartmentRole && dto.customRoles) {
-      await this.prisma.userRole.createMany({
-        data: dto.customRoles.map((idRole) => ({
-          idUser: user.idUser,
-          idRole,
-        })),
-      });
-    }
-
-    // Get user with all relations
-    const userWithRoles = await this.prisma.user.findUnique({
-      where: { idUser: user.idUser },
-      include: {
-        karyawan: {
-          include: {
-            jabatan: {
-              include: {
-                departemen: true,
-              },
-            },
-          },
-        },
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!userWithRoles) {
-      throw new Error('Failed to fetch created user');
-    }
-
-    const { roles, permissions } = await this.getRolesAndPermissions(
-      userWithRoles as unknown as UserWithRelations,
-    );
+    const roles = karyawan.useJabatanRole
+      ? [karyawan.jabatan.roleDefault]
+      : karyawan.karyawanRoles.map((kr) => kr.role);
 
     return {
-      idUser: user.idUser,
-      username: user.username,
-      email: user.email,
-      useDepartmentRole: user.useDepartmentRole,
-      roles: this.mapRolesToInfo(roles),
-      permissions,
-    };
-  }
-
-  // ===== 2. LOGIN =====
-  async login(dto: LoginDto): Promise<LoginResponse> {
-    const user = await this.prisma.user.findUnique({
-      where: { username: dto.username },
-      include: {
-        karyawan: {
-          include: {
-            jabatan: {
-              include: {
-                departemen: {
-                  include: {
-                    roleDefault: {
-                      include: {
-                        permissions: {
-                          include: {
-                            permission: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+      idKaryawan: karyawan.idKaryawan,
+      nik: karyawan.nik,
+      nama: karyawan.nama,
+      username: karyawan.username,
+      email: karyawan.email,
+      pasfoto: karyawan.pasfoto,
+      jenisKelamin: karyawan.jenisKelamin,
+      noHpPribadi: karyawan.noHpPribadi,
+      jabatan: {
+        idJabatan: karyawan.jabatan.idJabatan,
+        namaJabatan: karyawan.jabatan.namaJabatan,
+        departemen: karyawan.jabatan.departemen,
       },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Username atau password salah');
-    }
-
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new UnauthorizedException(
-        `Akun dikunci sampai ${user.lockedUntil.toLocaleString()}`,
-      );
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
-
-    if (!isPasswordValid) {
-      const attempts = user.loginAttempts + 1;
-      const updateData: { loginAttempts: number; lockedUntil?: Date } = {
-        loginAttempts: attempts,
-      };
-
-      if (attempts >= 5) {
-        updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-      }
-
-      await this.prisma.user.update({
-        where: { idUser: user.idUser },
-        data: updateData,
-      });
-
-      throw new UnauthorizedException('Username atau password salah');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Akun tidak aktif');
-    }
-
-    await this.prisma.user.update({
-      where: { idUser: user.idUser },
-      data: {
-        loginAttempts: 0,
-        lockedUntil: null,
-        lastLogin: new Date(),
-      },
-    });
-
-    const { roles, permissions } = await this.getRolesAndPermissions(
-      user as unknown as UserWithRelations,
-    );
-
-    const payload: JwtPayload = {
-      sub: user.idUser,
-      username: user.username,
-      email: user.email,
-      idKaryawan: user.karyawan?.idKaryawan,
-      roles: this.mapRolesToInfo(roles),
-      permissions,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    return {
-      accessToken,
-      user: {
-        idUser: user.idUser,
-        username: user.username,
-        email: user.email,
-        karyawan: user.karyawan
-          ? {
-              idKaryawan: user.karyawan.idKaryawan,
-              nama: user.karyawan.nama,
-              nik: user.karyawan.nik,
-              jabatan: {
-                namaJabatan: user.karyawan.jabatan?.namaJabatan,
-                departemen: user.karyawan.jabatan?.departemen?.namaDepartemen,
-              },
-            }
-          : null,
-        roles: this.mapRolesToInfo(roles),
-        permissions,
-      },
-    };
-  }
-
-  // ===== 3. CHANGE PASSWORD =====
-  async changePassword(idUser: string, dto: ChangePasswordDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { idUser },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User tidak ditemukan');
-    }
-
-    const isOldPasswordValid = await bcrypt.compare(
-      dto.oldPassword,
-      user.passwordHash,
-    );
-
-    if (!isOldPasswordValid) {
-      throw new UnauthorizedException('Password lama salah');
-    }
-
-    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
-
-    await this.prisma.user.update({
-      where: { idUser },
-      data: { passwordHash: newPasswordHash },
-    });
-
-    return { message: 'Password berhasil diubah' };
-  }
-
-  // ===== 4. ASSIGN CUSTOM ROLES =====
-  async assignRoles(dto: AssignRoleDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { idUser: dto.idUser },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User tidak ditemukan');
-    }
-
-    const rolesExist = await this.prisma.refRole.findMany({
-      where: { idRole: { in: dto.idRoles } },
-    });
-
-    if (rolesExist.length !== dto.idRoles.length) {
-      throw new BadRequestException('Beberapa role tidak valid');
-    }
-
-    await this.prisma.user.update({
-      where: { idUser: dto.idUser },
-      data: { useDepartmentRole: false },
-    });
-
-    await this.prisma.userRole.deleteMany({
-      where: { idUser: dto.idUser },
-    });
-
-    await this.prisma.userRole.createMany({
-      data: dto.idRoles.map((idRole) => ({
-        idUser: dto.idUser,
-        idRole,
+      roles: roles.map((r) => ({
+        idRole: r.idRole,
+        namaRole: r.namaRole,
+        level: r.level,
       })),
-    });
-
-    return { message: 'Roles berhasil di-assign' };
+      permissions: effectivePermissions.map((p) => ({
+        idPermission: p.idPermission,
+        namaPermission: p.namaPermission,
+      })),
+      useJabatanRole: karyawan.useJabatanRole,
+    };
   }
 
-  // ===== 5. ADMIN RESET PASSWORD =====
-  async adminResetPassword(dto: AdminResetPasswordDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { idUser: dto.idUser },
-    });
+  // Helper: Calculate effective permissions
+  private calculateEffectivePermissions(karyawan: any) {
+    // 1. Get base permissions from roles
+    const basePermissions: Set<number> = new Set();
+    const allPermissions: Map<number, any> = new Map();
 
-    if (!user) {
-      throw new NotFoundException('User tidak ditemukan');
-    }
-
-    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
-
-    await this.prisma.user.update({
-      where: { idUser: dto.idUser },
-      data: {
-        passwordHash: newPasswordHash,
-        loginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
-
-    return { message: 'Password berhasil direset' };
-  }
-
-  // ===== 6. GET PROFILE =====
-  async getProfile(idUser: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { idUser },
-      include: {
-        karyawan: {
-          include: {
-            jabatan: {
-              include: {
-                departemen: true,
-              },
-            },
-          },
-        },
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User tidak ditemukan');
-    }
-
-    const { roles, permissions } = await this.getRolesAndPermissions(
-      user as unknown as UserWithRelations,
-    );
-
-    return {
-      idUser: user.idUser,
-      username: user.username,
-      email: user.email,
-      karyawan: user.karyawan
-        ? {
-            idKaryawan: user.karyawan.idKaryawan,
-            nama: user.karyawan.nama,
-            nik: user.karyawan.nik,
-            email: user.karyawan.email,
-            jabatan: {
-              namaJabatan: user.karyawan.jabatan?.namaJabatan,
-              departemen: user.karyawan.jabatan?.departemen?.namaDepartemen,
-            },
+    if (karyawan.useJabatanRole) {
+      // Use jabatan default role
+      const roleDefault = karyawan.jabatan.roleDefault;
+      if (roleDefault && roleDefault.permissions) {
+        roleDefault.permissions.forEach((rp) => {
+          if (rp.permission) {
+            basePermissions.add(rp.permission.idPermission);
+            allPermissions.set(rp.permission.idPermission, rp.permission);
           }
-        : null,
-      useDepartmentRole: user.useDepartmentRole,
-      roles: this.mapRolesToInfo(roles),
-      permissions,
-    };
-  }
-
-  // ===== 7. TOGGLE USER STATUS =====
-  async toggleUserStatus(idUser: string): Promise<ToggleUserStatusResponse> {
-    const user = await this.prisma.user.findUnique({
-      where: { idUser },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User tidak ditemukan');
+        });
+      }
+    } else {
+      // Use custom roles
+      if (karyawan.karyawanRoles && karyawan.karyawanRoles.length > 0) {
+        karyawan.karyawanRoles.forEach((kr) => {
+          if (kr.role && kr.role.permissions) {
+            kr.role.permissions.forEach((rp) => {
+              if (rp.permission) {
+                basePermissions.add(rp.permission.idPermission);
+                allPermissions.set(rp.permission.idPermission, rp.permission);
+              }
+            });
+          }
+        });
+      }
     }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { idUser },
-      data: {
-        isActive: !user.isActive,
-      },
+    // 2. Apply permission overrides
+    const overrides = karyawan.karyawanPermissionOverrides || [];
+
+    overrides.forEach((override) => {
+      if (override.typePermission) {
+        // ADD permission
+        basePermissions.add(override.idPermission);
+        if (override.permission) {
+          allPermissions.set(
+            override.permission.idPermission,
+            override.permission,
+          );
+        }
+      } else {
+        // REMOVE permission
+        basePermissions.delete(override.idPermission);
+        allPermissions.delete(override.idPermission);
+      }
     });
 
-    return {
-      idUser: updatedUser.idUser,
-      username: updatedUser.username,
-      isActive: updatedUser.isActive,
-    };
+    // 3. Return array of permissions
+    return Array.from(allPermissions.values());
   }
 
-  // ===== 8. GET ALL USERS =====
-  async getAllUsers(
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<GetAllUsersResponse> {
+  async getAllUsers(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
-    const [users, total] = await Promise.all([
-      this.prisma.user.findMany({
+    const [data, total] = await Promise.all([
+      this.prisma.refKaryawan.findMany({
+        where: {
+          username: { not: null },
+        },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
         include: {
-          karyawan: {
-            select: {
-              idKaryawan: true,
-              nama: true,
-              nik: true,
-              jabatan: {
-                select: {
-                  namaJabatan: true,
-                  departemen: {
-                    select: {
-                      namaDepartemen: true,
-                    },
-                  },
-                },
-              },
+          jabatan: {
+            include: {
+              departemen: true,
+              roleDefault: true,
             },
           },
-          userRoles: {
+          karyawanRoles: {
             include: {
-              role: {
-                select: {
-                  idRole: true,
-                  namaRole: true,
-                  level: true,
-                },
-              },
+              role: true,
             },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
       }),
-      this.prisma.user.count(),
+      this.prisma.refKaryawan.count({
+        where: {
+          username: { not: null },
+        },
+      }),
     ]);
-
-    // Map users with roles info
-    const mappedUsers = await Promise.all(
-      users.map(async (user) => {
-        const { roles, permissions } = await this.getRolesAndPermissions(
-          user as unknown as UserWithRelations,
-        );
-
-        return {
-          idUser: user.idUser,
-          username: user.username,
-          email: user.email,
-          isActive: user.isActive,
-          useDepartmentRole: user.useDepartmentRole,
-          lastLogin: user.lastLogin,
-          createdAt: user.createdAt,
-          karyawan: user.karyawan
-            ? {
-                idKaryawan: user.karyawan.idKaryawan,
-                nama: user.karyawan.nama,
-                nik: user.karyawan.nik,
-                jabatan: {
-                  namaJabatan: user.karyawan.jabatan?.namaJabatan,
-                  departemen: user.karyawan.jabatan?.departemen?.namaDepartemen,
-                },
-              }
-            : null,
-          roles: this.mapRolesToInfo(roles),
-          permissions,
-        };
-      }),
-    );
 
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: mappedUsers,
+      data,
       meta: {
-        total,
         page,
         limit,
-        totalPages,
+        total,
+        totalPages: totalPages,
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
     };
+  }
+
+  // Helper: Generate reset token
+  private generateResetToken(): string {
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 }

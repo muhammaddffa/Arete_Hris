@@ -18,11 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:roles": "ts-node prisma/seeders/role.seeder.ts",
-    "seed:permissions": "ts-node prisma/seeders/permission.seeder.ts",
-    "seed:departments": "ts-node prisma/seeders/departments.seeder.ts",
-    "seed:all": "npm run seed:roles && npm run seed:permissions && npm run seed:departments && npm run seed:users",
-    "seed:users": "ts-node prisma/seeders/users.seeder.ts"
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",
@@ -63,7 +62,7 @@
     "@nestjs/testing": "^11.1.9",
     "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.19.1",
