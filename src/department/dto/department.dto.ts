@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsInt,
   IsOptional,
   MaxLength,
   IsNotEmpty,
@@ -8,6 +7,7 @@ import {
   Max,
   IsBoolean,
   IsEnum,
+  IsInt,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -22,16 +22,6 @@ export class CreateDepartmentDto {
   @IsNotEmpty()
   @MaxLength(100)
   namaDepartemen: string;
-
-  @ApiProperty({
-    description: 'ID role default untuk departemen',
-    example: 1,
-    type: Number,
-  })
-  @Type(() => Number)
-  @IsInt()
-  @IsNotEmpty()
-  idRoleDefault: number;
 
   @ApiPropertyOptional({
     description: 'Deskripsi departemen',
@@ -54,16 +44,6 @@ export class UpdateDepartmentDto {
   namaDepartemen?: string;
 
   @ApiPropertyOptional({
-    description: 'ID role default untuk departemen',
-    example: 1,
-    type: Number,
-  })
-  @Type(() => Number)
-  @IsInt()
-  @IsOptional()
-  idRoleDefault?: number;
-
-  @ApiPropertyOptional({
     description: 'Deskripsi departemen',
     example: 'Departemen yang menangani sumber daya manusia',
   })
@@ -82,19 +62,8 @@ export class QueryDepartmentDto {
   @IsOptional()
   search?: string;
 
-  // NEW: Filter by role
   @ApiPropertyOptional({
-    description: 'Filter by role default ID',
-    example: 2,
-    type: Number,
-  })
-  @Type(() => Number)
-  @IsInt()
-  @IsOptional()
-  idRoleDefault?: number;
-
-  @ApiPropertyOptional({
-    description: 'Include relations (roleDefault, count jabatan)',
+    description: 'Include relations (count jabatan)',
     type: Boolean,
     default: false,
   })
@@ -149,20 +118,6 @@ export class QueryDepartmentDto {
   sortOrder?: 'asc' | 'desc' = 'desc';
 }
 
-export class RoleDefaultDto {
-  @ApiProperty({ example: 1 })
-  idRole: number;
-
-  @ApiProperty({ example: 'Manager' })
-  namaRole: string;
-
-  @ApiProperty({ example: 3 })
-  level: number;
-
-  @ApiPropertyOptional({ example: 'Role untuk manager departemen' })
-  deskripsi?: string;
-}
-
 export class DepartmentCountDto {
   @ApiProperty({ example: 5 })
   jabatan: number;
@@ -178,9 +133,6 @@ export class DepartmentResponseDto {
   @ApiProperty({ example: 'Human Resources' })
   namaDepartemen: string;
 
-  @ApiProperty({ example: 1 })
-  idRoleDefault: number;
-
   @ApiProperty({ example: 'Departemen HR', nullable: true })
   deskripsi: string | null;
 
@@ -189,9 +141,6 @@ export class DepartmentResponseDto {
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
   updatedAt: Date;
-
-  @ApiPropertyOptional({ type: RoleDefaultDto })
-  roleDefault?: RoleDefaultDto;
 
   @ApiPropertyOptional({ type: DepartmentCountDto })
   _count?: DepartmentCountDto;
@@ -209,6 +158,12 @@ export class PaginationMetaDto {
 
   @ApiProperty({ example: 3, description: 'Total pages' })
   totalPages: number;
+
+  @ApiProperty({ example: true })
+  hasNextPage: boolean;
+
+  @ApiProperty({ example: false })
+  hasPrevPage: boolean;
 }
 
 export class PaginatedDepartmentResponseDto {

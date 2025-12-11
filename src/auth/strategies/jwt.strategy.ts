@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { JwtPayload } from '../types/auth.types';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,33 +15,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
-    // Payload dari JWT token
-    const user = await this.prisma.user.findUnique({
-      where: { idUser: payload.sub },
-      include: {
-        karyawan: true,
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
+  async validate(payload: any) {
+    // PERBAIKAN: Ganti 'user' jadi 'refKaryawan'
+    const karyawan = await this.prisma.refKaryawan.findUnique({
+      where: { idKaryawan: payload.sub },
     });
 
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('User tidak aktif atau tidak ditemukan');
+    if (!karyawan || !karyawan.isActive) {
+      throw new UnauthorizedException();
     }
 
-    // Data ini sudah ada di JWT payload
     return {
-      idUser: payload.sub,
+      idKaryawan: payload.sub,
       username: payload.username,
-      email: payload.email,
-      idKaryawan: payload.idKaryawan || null,
+      nik: payload.nik,
       roles: payload.roles,
       permissions: payload.permissions,
-      useDepartmentRole: user.useDepartmentRole,
     };
   }
 }

@@ -1,8 +1,3 @@
-// src/auth/types/auth.types.ts
-
-/**
- * ===== ROLE & PERMISSION TYPES =====
- */
 export interface Permission {
   idPermission: number;
   namaPermission: string;
@@ -43,9 +38,6 @@ export interface Jabatan {
   departemen?: Departemen;
 }
 
-/**
- * ===== KARYAWAN TYPES =====
- */
 export interface Karyawan {
   idKaryawan: string;
   nama: string;
@@ -55,9 +47,6 @@ export interface Karyawan {
   jabatan?: Jabatan;
 }
 
-/**
- * ===== USER TYPES =====
- */
 export interface UserRole {
   idUser: string;
   idRole: number;
@@ -84,9 +73,6 @@ export interface UserWithRelations extends User {
   userRoles?: UserRole[];
 }
 
-/**
- * ===== AUTH RESPONSE TYPES =====
- */
 export interface RoleInfo {
   idRole: number;
   namaRole: string;
@@ -157,17 +143,11 @@ export interface GetAllUsersResponse {
   };
 }
 
-/**
- * ===== HELPER RETURN TYPES =====
- */
 export interface RolesAndPermissions {
   roles: Role[];
   permissions: string[];
 }
 
-/**
- * ===== JWT PAYLOAD TYPE =====
- */
 export interface JwtPayload {
   sub: string;
   username: string;

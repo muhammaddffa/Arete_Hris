@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -6,6 +9,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
 async function setupUploadDirectories() {
@@ -36,7 +40,21 @@ async function setupUploadDirectories() {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.use((req: any, res: any, next: any) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+      console.log('\n🔍 RAW REQUEST CHECK:');
+      console.log('- Readable:', req.readable);
+      console.log('- ReadableEnded:', req.readableEnded);
+      console.log(
+        '- Body already parsed?:',
+        Object.keys(req.body || {}).length > 0,
+      );
+    }
+    next();
+  });
 
   // Enable CORS
   app.enableCors({
@@ -46,14 +64,21 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // ⬇️ HAPUS INI - JANGAN GUNAKAN useBodyParser untuk multipart!
+  // Biarkan Multer yang handle multipart secara otomatis
+  // app.useBodyParser('json', { limit: '50mb' });
+  // app.useBodyParser('urlencoded', { limit: '50mb', extended: true });
+
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  // ⬇️ PINDAHKAN GlobalPipes KE PALING AKHIR (setelah interceptors/filters)
+  // Karena validation pipe bisa mem-parse body sebelum Multer
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // ⬅️ UBAH jadi false untuk multipart
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
@@ -94,7 +119,8 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`\n🚀 Application is running on: http://localhost:${port}`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`📁 File upload: Cloudinary enabled\n`);
 }
 bootstrap();

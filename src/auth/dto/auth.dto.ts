@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-// src/auth/dto/auth.dto.ts
 import {
   IsString,
   IsEmail,
@@ -97,7 +96,7 @@ export class AssignRoleDto {
   @ApiProperty({ example: 'uuid-user' })
   @IsUUID()
   @IsNotEmpty()
-  idUser: string;
+  idKaryawan: string;
 
   @ApiProperty({ example: [1, 2, 3], description: 'Array of role IDs' })
   @IsArray()
@@ -111,7 +110,7 @@ export class AdminResetPasswordDto {
   @ApiProperty({ example: 'uuid-user' })
   @IsUUID()
   @IsNotEmpty()
-  idUser: string;
+  idKaryawan: string;
 
   @ApiProperty({ example: 'NewTempPassword123!' })
   @IsString()

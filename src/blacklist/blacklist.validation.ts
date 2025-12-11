@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-// ============================================
-// CREATE BLACKLIST SCHEMA
-// ============================================
 export const CreateBlacklistSchema = z.object({
   idKaryawan: z.string().uuid('ID karyawan harus UUID'),
   alasan: z
@@ -11,9 +8,6 @@ export const CreateBlacklistSchema = z.object({
     .max(1000, 'Alasan maksimal 1000 karakter'),
 });
 
-// ============================================
-// UPDATE BLACKLIST SCHEMA
-// ============================================
 export const UpdateBlacklistSchema = z.object({
   alasan: z
     .string()
@@ -23,9 +17,6 @@ export const UpdateBlacklistSchema = z.object({
   pasfoto: z.string().optional(),
 });
 
-// ============================================
-// FILTER BLACKLIST SCHEMA
-// ============================================
 export const FilterBlacklistSchema = z.object({
   search: z.string().optional(),
   page: z.number().int().min(1).default(1).optional(),
@@ -35,16 +26,10 @@ export const FilterBlacklistSchema = z.object({
   includeRelations: z.boolean().default(false).optional(),
 });
 
-// ============================================
-// TYPE EXPORTS
-// ============================================
 export type CreateBlacklistInput = z.infer<typeof CreateBlacklistSchema>;
 export type UpdateBlacklistInput = z.infer<typeof UpdateBlacklistSchema>;
 export type FilterBlacklistInput = z.infer<typeof FilterBlacklistSchema>;
 
-// ============================================
-// VALIDATION FUNCTIONS
-// ============================================
 export function validateCreateBlacklist(data: unknown): CreateBlacklistInput {
   return CreateBlacklistSchema.parse(data);
 }

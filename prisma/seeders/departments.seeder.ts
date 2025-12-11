@@ -1,4 +1,7 @@
-// prisma/seeders/departments-logistics.seeder.ts
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// prisma/seeders/departments.seeder.ts
 import { PrismaClient, RefRole, RefDepartemen } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -6,8 +9,14 @@ const prisma = new PrismaClient();
 export async function seedLogisticsDepartments() {
   console.log('🏢 Creating Logistics Company Departments & Positions...\n');
 
-  // Get roles
+  // Get roles untuk assignment ke jabatan
   const roles: RefRole[] = await prisma.refRole.findMany();
+
+  const getRole = (namaRole: string) => {
+    const role = roles.find((r) => r.namaRole === namaRole);
+    if (!role) throw new Error(`Role not found: ${namaRole}`);
+    return role;
+  };
 
   const hrdRole = roles.find((r) => r.namaRole === 'HRD');
   const adminRole = roles.find((r) => r.namaRole === 'Admin');
@@ -31,80 +40,87 @@ export async function seedLogisticsDepartments() {
     throw new Error('Required roles not found');
   }
 
-  // ===== CREATE DEPARTMENTS =====
+  // ===== CREATE DEPARTMENTS (NO ROLE DEFAULT) =====
   const departments: RefDepartemen[] = await prisma.$transaction([
-    // Core Management
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Human Resource' },
+      update: {},
+      create: {
         namaDepartemen: 'Human Resource',
-        idRoleDefault: hrdRole.idRole,
         deskripsi: 'Manage recruitment, employee relations, and HR operations',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Information Technology' },
+      update: {},
+      create: {
         namaDepartemen: 'Information Technology',
-        idRoleDefault: adminRole.idRole,
         deskripsi: 'System development, maintenance, and IT infrastructure',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Finance & Accounting' },
+      update: {},
+      create: {
         namaDepartemen: 'Finance & Accounting',
-        idRoleDefault: financeRole.idRole,
         deskripsi: 'Financial management, accounting, and payroll processing',
       },
     }),
 
-    // Operations - Core Logistics
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Operations' },
+      update: {},
+      create: {
         namaDepartemen: 'Operations',
-        idRoleDefault: opsManagerRole.idRole,
         deskripsi: 'Overall logistics operations and coordination',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Warehouse' },
+      update: {},
+      create: {
         namaDepartemen: 'Warehouse',
-        idRoleDefault: supervisorRole.idRole,
         deskripsi: 'Warehouse management, inventory, and storage operations',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Transportation' },
+      update: {},
+      create: {
         namaDepartemen: 'Transportation',
-        idRoleDefault: supervisorRole.idRole,
         deskripsi: 'Fleet management and delivery operations',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Distribution' },
+      update: {},
+      create: {
         namaDepartemen: 'Distribution',
-        idRoleDefault: supervisorRole.idRole,
         deskripsi: 'Distribution planning and last-mile delivery',
       },
     }),
 
-    // Support Departments
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Customer Service' },
+      update: {},
+      create: {
         namaDepartemen: 'Customer Service',
-        idRoleDefault: karyawanRole.idRole,
         deskripsi: 'Customer support and complaint handling',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Sales & Marketing' },
+      update: {},
+      create: {
         namaDepartemen: 'Sales & Marketing',
-        idRoleDefault: karyawanRole.idRole,
         deskripsi: 'Business development and marketing activities',
       },
     }),
-    prisma.refDepartemen.create({
-      data: {
+    prisma.refDepartemen.upsert({
+      where: { namaDepartemen: 'Procurement' },
+      update: {},
+      create: {
         namaDepartemen: 'Procurement',
-        idRoleDefault: karyawanRole.idRole,
         deskripsi: 'Procurement of vehicles, equipment, and supplies',
       },
     }),
@@ -113,26 +129,24 @@ export async function seedLogisticsDepartments() {
   console.log('✅ Departments created:', departments.length);
   console.log('\n📋 Department Details:');
   console.log(
-    '┌──────────────────────────────┬────────────────────┬─────────────┐',
+    '┌──────────────────────────────┬─────────────────────────────────────┐',
   );
   console.log(
-    '│ Department Name              │ Default Role       │ Level       │',
+    '│ Department Name              │ Description                         │',
   );
   console.log(
-    '├──────────────────────────────┼────────────────────┼─────────────┤',
+    '├──────────────────────────────┼─────────────────────────────────────┤',
   );
   departments.forEach((dept) => {
-    const role = roles.find((r) => r.idRole === dept.idRoleDefault);
-    console.log(
-      `│ ${dept.namaDepartemen.padEnd(28)} │ ${role?.namaRole.padEnd(18)} │ Level ${role?.level}     │`,
-    );
+    const desc = dept.deskripsi?.substring(0, 35) || '';
+    console.log(`│ ${dept.namaDepartemen.padEnd(28)} │ ${desc.padEnd(35)} │`);
   });
   console.log(
-    '└──────────────────────────────┴────────────────────┴─────────────┘\n',
+    '└──────────────────────────────┴─────────────────────────────────────┘\n',
   );
 
-  // ===== CREATE JABATAN (POSITIONS) =====
-  console.log('💼 Creating Positions (Jabatan)...\n');
+  // ===== CREATE JABATAN (POSITIONS) WITH ROLE =====
+  console.log('💼 Creating Positions (Jabatan) with Role Assignments...\n');
 
   const hrDept = departments.find((d) => d.namaDepartemen === 'Human Resource');
   const itDept = departments.find(
@@ -162,13 +176,13 @@ export async function seedLogisticsDepartments() {
   );
 
   const jabatan = await prisma.$transaction([
-    // HR Department
+    // HR Department - HRD Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'HR Manager',
         idDepartemen: hrDept!.idDepartemen,
-        deskripsiJabatan:
-          'Lead HR operations, recruitment, and employee development',
+        idRoleDefault: getRole('HRD').idRole, // ✅ Match
+        deskripsiJabatan: 'Lead HR operations...',
         status: true,
       },
     }),
@@ -176,17 +190,17 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'HR Specialist',
         idDepartemen: hrDept!.idDepartemen,
-        deskripsiJabatan:
-          'Handle recruitment, employee relations, and HR administration',
+        idRoleDefault: getRole('HRD').idRole, // ✅ Match
+        deskripsiJabatan: 'Handle recruitment...',
         status: true,
       },
     }),
-
-    // IT Department
+    // IT Department - Admin Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'IT Manager',
         idDepartemen: itDept!.idDepartemen,
+        idRoleDefault: adminRole.idRole,
         deskripsiJabatan: 'Manage IT infrastructure and system development',
         status: true,
       },
@@ -195,16 +209,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'System Administrator',
         idDepartemen: itDept!.idDepartemen,
+        idRoleDefault: adminRole.idRole,
         deskripsiJabatan: 'Maintain servers, networks, and IT systems',
         status: true,
       },
     }),
 
-    // Finance Department
+    // Finance Department - Finance Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Finance Manager',
         idDepartemen: financeDept!.idDepartemen,
+        idRoleDefault: financeRole.idRole,
         deskripsiJabatan: 'Lead financial planning and accounting operations',
         status: true,
       },
@@ -213,6 +229,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Accountant',
         idDepartemen: financeDept!.idDepartemen,
+        idRoleDefault: financeRole.idRole,
         deskripsiJabatan: 'Handle bookkeeping and financial reporting',
         status: true,
       },
@@ -221,16 +238,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Payroll Staff',
         idDepartemen: financeDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Process employee payroll and benefits',
         status: true,
       },
     }),
 
-    // Operations Department
+    // Operations Department - Operations Manager Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Operations Director',
         idDepartemen: opsDept!.idDepartemen,
+        idRoleDefault: getRole('Operations Manager').idRole, // ✅ Match
         deskripsiJabatan: 'Oversee all logistics operations',
         status: true,
       },
@@ -239,7 +258,8 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Operations Manager',
         idDepartemen: opsDept!.idDepartemen,
-        deskripsiJabatan: 'Manage daily logistics operations and coordination',
+        idRoleDefault: getRole('Operations Manager').idRole, // ✅ Match
+        deskripsiJabatan: 'Manage daily logistics operations',
         status: true,
       },
     }),
@@ -247,17 +267,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Operations Coordinator',
         idDepartemen: opsDept!.idDepartemen,
-        deskripsiJabatan:
-          'Coordinate between departments for smooth operations',
+        idRoleDefault: getRole('Operations Coordinator').idRole, // ✅ BARU! Match
+        deskripsiJabatan: 'Coordinate between departments',
         status: true,
       },
     }),
 
-    // Warehouse Department
+    // Warehouse Department - Supervisor & Warehouse Staff Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Warehouse Manager',
         idDepartemen: warehouseDept!.idDepartemen,
+        idRoleDefault: getRole('Warehouse Manager').idRole, // ✅ BARU! Match
         deskripsiJabatan: 'Manage warehouse operations and inventory',
         status: true,
       },
@@ -266,7 +287,8 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Warehouse Supervisor',
         idDepartemen: warehouseDept!.idDepartemen,
-        deskripsiJabatan: 'Supervise warehouse staff and daily activities',
+        idRoleDefault: getRole('Warehouse Supervisor').idRole, // ✅ BARU! Match
+        deskripsiJabatan: 'Supervise warehouse staff',
         status: true,
       },
     }),
@@ -274,32 +296,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Warehouse Staff',
         idDepartemen: warehouseDept!.idDepartemen,
-        deskripsiJabatan: 'Handle loading, unloading, and inventory management',
-        status: true,
-      },
-    }),
-    prisma.refJabatan.create({
-      data: {
-        namaJabatan: 'Forklift Operator',
-        idDepartemen: warehouseDept!.idDepartemen,
-        deskripsiJabatan: 'Operate forklift for moving goods',
-        status: true,
-      },
-    }),
-    prisma.refJabatan.create({
-      data: {
-        namaJabatan: 'Inventory Controller',
-        idDepartemen: warehouseDept!.idDepartemen,
-        deskripsiJabatan: 'Monitor and control warehouse inventory',
+        idRoleDefault: getRole('Warehouse Staff').idRole, // ✅ Match
+        deskripsiJabatan: 'Handle loading, unloading',
         status: true,
       },
     }),
 
-    // Transportation Department
+    // Transportation Department - Supervisor & Driver Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Fleet Manager',
         idDepartemen: transportDept!.idDepartemen,
+        idRoleDefault: getRole('Fleet Manager').idRole, // ✅ BARU! Match
         deskripsiJabatan: 'Manage vehicle fleet and maintenance',
         status: true,
       },
@@ -308,6 +316,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Transportation Supervisor',
         idDepartemen: transportDept!.idDepartemen,
+        idRoleDefault: getRole('Transportation Supervisor').idRole, // ✅ BARU! Match
         deskripsiJabatan: 'Supervise drivers and delivery routes',
         status: true,
       },
@@ -316,40 +325,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Heavy Truck Driver',
         idDepartemen: transportDept!.idDepartemen,
-        deskripsiJabatan: 'Drive heavy trucks for long-distance delivery',
-        status: true,
-      },
-    }),
-    prisma.refJabatan.create({
-      data: {
-        namaJabatan: 'Light Truck Driver',
-        idDepartemen: transportDept!.idDepartemen,
-        deskripsiJabatan: 'Drive light trucks for local delivery',
-        status: true,
-      },
-    }),
-    prisma.refJabatan.create({
-      data: {
-        namaJabatan: 'Courier',
-        idDepartemen: transportDept!.idDepartemen,
-        deskripsiJabatan: 'Deliver packages using motorcycle or van',
-        status: true,
-      },
-    }),
-    prisma.refJabatan.create({
-      data: {
-        namaJabatan: 'Vehicle Mechanic',
-        idDepartemen: transportDept!.idDepartemen,
-        deskripsiJabatan: 'Maintain and repair company vehicles',
+        idRoleDefault: getRole('Driver').idRole, // ✅ Match (generic untuk semua driver)
+        deskripsiJabatan: 'Drive heavy trucks',
         status: true,
       },
     }),
 
-    // Distribution Department
+    // Distribution Department - Supervisor & Karyawan Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Distribution Manager',
         idDepartemen: distributionDept!.idDepartemen,
+        idRoleDefault: supervisorRole.idRole,
         deskripsiJabatan: 'Plan and manage distribution network',
         status: true,
       },
@@ -358,6 +345,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Distribution Supervisor',
         idDepartemen: distributionDept!.idDepartemen,
+        idRoleDefault: supervisorRole.idRole,
         deskripsiJabatan: 'Supervise distribution team and routes',
         status: true,
       },
@@ -366,6 +354,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Route Planner',
         idDepartemen: distributionDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Plan optimal delivery routes',
         status: true,
       },
@@ -374,16 +363,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Dispatcher',
         idDepartemen: distributionDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Dispatch drivers and coordinate deliveries',
         status: true,
       },
     }),
 
-    // Customer Service
+    // Customer Service - Karyawan Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'CS Manager',
         idDepartemen: csDept!.idDepartemen,
+        idRoleDefault: supervisorRole.idRole,
         deskripsiJabatan: 'Manage customer service operations',
         status: true,
       },
@@ -392,6 +383,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Customer Service Officer',
         idDepartemen: csDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Handle customer inquiries and complaints',
         status: true,
       },
@@ -400,16 +392,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Call Center Agent',
         idDepartemen: csDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Answer customer calls and provide support',
         status: true,
       },
     }),
 
-    // Sales & Marketing
+    // Sales & Marketing - Karyawan Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Sales Manager',
         idDepartemen: salesDept!.idDepartemen,
+        idRoleDefault: supervisorRole.idRole,
         deskripsiJabatan: 'Lead sales team and achieve targets',
         status: true,
       },
@@ -418,6 +412,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Sales Executive',
         idDepartemen: salesDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Acquire new clients and maintain relationships',
         status: true,
       },
@@ -426,16 +421,18 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Marketing Staff',
         idDepartemen: salesDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Execute marketing campaigns and promotions',
         status: true,
       },
     }),
 
-    // Procurement
+    // Procurement - Karyawan Role
     prisma.refJabatan.create({
       data: {
         namaJabatan: 'Procurement Manager',
         idDepartemen: procurementDept!.idDepartemen,
+        idRoleDefault: supervisorRole.idRole,
         deskripsiJabatan: 'Manage procurement of vehicles and supplies',
         status: true,
       },
@@ -444,6 +441,7 @@ export async function seedLogisticsDepartments() {
       data: {
         namaJabatan: 'Procurement Staff',
         idDepartemen: procurementDept!.idDepartemen,
+        idRoleDefault: karyawanRole.idRole,
         deskripsiJabatan: 'Handle purchasing and vendor relations',
         status: true,
       },
@@ -452,7 +450,7 @@ export async function seedLogisticsDepartments() {
 
   console.log('✅ Positions created:', jabatan.length);
 
-  // Group by department
+  // Group by department and role
   const jabatanByDept = departments
     .map((dept) => ({
       dept: dept.namaDepartemen,
@@ -460,15 +458,30 @@ export async function seedLogisticsDepartments() {
     }))
     .filter((item) => item.positions.length > 0);
 
-  console.log('\n📋 Positions by Department:');
-  jabatanByDept.forEach((item) => {
+  console.log('\n📋 Positions by Department (with Role Assignment):');
+  for (const item of jabatanByDept) {
     console.log(`\n   ${item.dept}:`);
-    item.positions.forEach((pos) => {
-      console.log(`      - ${pos.namaJabatan}`);
-    });
-  });
+    for (const pos of item.positions) {
+      const role = roles.find((r) => r.idRole === pos.idRoleDefault);
+      console.log(
+        `      - ${pos.namaJabatan.padEnd(30)} → Role: ${role?.namaRole}`,
+      );
+    }
+  }
 
   console.log(
     '\n═══════════════════════════════════════════════════════════\n',
   );
+}
+
+// If run directly
+if (require.main === module) {
+  seedLogisticsDepartments()
+    .catch((e) => {
+      console.error('❌ Error seeding departments:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
 }
