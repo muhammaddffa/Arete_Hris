@@ -142,6 +142,9 @@ export class WawancaraService {
       includeRelations = true,
     } = filterDto;
 
+    const validPage = Math.max(1, Number(page) || 1);
+    const validLimit = Math.max(1, Number(limit) || 10);
+
     // Build where clause
     const where: any = {};
 
@@ -179,15 +182,14 @@ export class WawancaraService {
       };
     }
 
-    // Pagination
-    const skip = (page - 1) * limit;
+    const skip = (validPage - 1) * validLimit;
 
     // Execute query
     const [data, total] = await this.prisma.$transaction([
       this.prisma.refWawancara.findMany({
         where,
         skip,
-        take: limit,
+        take: validLimit,
         orderBy: { [sortBy]: sortOrder },
         include: includeRelations
           ? {
@@ -225,24 +227,21 @@ export class WawancaraService {
       this.prisma.refWawancara.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / validLimit);
 
     return {
       data,
       meta: {
         total,
-        page,
-        limit,
+        page: validPage, // ✅ Return validated page
+        limit: validLimit,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+        hasNextPage: validPage < totalPages,
+        hasPrevPage: validPage > 1,
       },
     };
   }
 
-  // ============================================
-  // FIND ONE
-  // ============================================
   async findOne(id: string) {
     const wawancara = await this.prisma.refWawancara.findUnique({
       where: { idWawancara: id },
@@ -333,9 +332,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // GET UPCOMING INTERVIEWS
-  // ============================================
   async getUpcoming(limit = 10) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -366,9 +362,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // UPDATE
-  // ============================================
   async update(id: string, updateWawancaraDto: UpdateWawancaraDto) {
     // Check existence
     await this.findOne(id);
@@ -403,9 +396,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // COMPLETE INTERVIEW
-  // ============================================
   async complete(id: string, completeDto: CompleteWawancaraDto) {
     const wawancara = await this.findOne(id);
 
@@ -435,9 +425,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // CANCEL INTERVIEW
-  // ============================================
   async cancel(id: string, alasan?: string) {
     const wawancara = await this.findOne(id);
 
@@ -468,9 +455,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // RESCHEDULE INTERVIEW
-  // ============================================
   async reschedule(
     id: string,
     tanggalBaru: string,
@@ -528,9 +512,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // DELETE
-  // ============================================
   async remove(id: string) {
     await this.findOne(id);
 
@@ -545,9 +526,6 @@ export class WawancaraService {
     });
   }
 
-  // ============================================
-  // GET STATS
-  // ============================================
   async getStats() {
     const [total, byStatus, byJenis] = await Promise.all([
       this.prisma.refWawancara.count(),

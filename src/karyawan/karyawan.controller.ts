@@ -34,6 +34,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ResponseUtil } from '../common/utils/response.util';
 import { CloudinaryService } from '../upload/cloudinary.service';
 import { allFileFilter } from '../upload/multer-cloudinary.config';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Karyawan')
 @Controller('karyawan')
@@ -50,6 +51,7 @@ export class KaryawanController {
    * Required permission: 'create_karyawan'
    */
   @Post()
+  @Public()
   @ApiOperation({ summary: 'Create karyawan (candidate)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
@@ -66,8 +68,8 @@ export class KaryawanController {
       },
     ),
   )
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('create_karyawan')
+  // @UseGuards(JwtAuthGuard, PermissionsGuard)
+  // @Permissions('create_karyawan')
   async create(
     @Req() req: any,
     @UploadedFiles()
@@ -133,8 +135,8 @@ export class KaryawanController {
    * Required permission: 'view_karyawan' or 'view_all_karyawan'
    */
   @Get()
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('view_karyawan')
+  // @UseGuards(JwtAuthGuard, PermissionsGuard)
+  // @Permissions('view_karyawan')
   @ApiOperation({ summary: 'Get all karyawan' })
   async findAll(@Query() filterDto: any) {
     const result = await this.karyawanService.findAll(filterDto);

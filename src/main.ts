@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -11,7 +15,6 @@ import { mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
-// eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
 async function setupUploadDirectories() {
   const uploadDirs = [
     'uploads',
@@ -42,6 +45,23 @@ async function setupUploadDirectories() {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.enableCors({
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'ngrok-skip-browser-warning',
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  });
+
   app.use((req: any, res: any, next: any) => {
     const contentType = req.headers['content-type'] || '';
     if (contentType.includes('multipart/form-data')) {
@@ -56,29 +76,15 @@ async function bootstrap() {
     next();
   });
 
-  // Enable CORS
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
-  });
-
   app.setGlobalPrefix('api');
 
-  // ⬇️ HAPUS INI - JANGAN GUNAKAN useBodyParser untuk multipart!
-  // Biarkan Multer yang handle multipart secara otomatis
-  // app.useBodyParser('json', { limit: '50mb' });
-  // app.useBodyParser('urlencoded', { limit: '50mb', extended: true });
-
   app.useGlobalInterceptors(new ResponseInterceptor());
-
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // ⬇️ PINDAHKAN GlobalPipes KE PALING AKHIR (setelah interceptors/filters)
-  // Karena validation pipe bisa mem-parse body sebelum Multer
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: false, // ⬅️ UBAH jadi false untuk multipart
+      forbidNonWhitelisted: false,
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
@@ -116,11 +122,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3333;
   await app.listen(port);
 
   console.log(`\n🚀 Application is running on: http://localhost:${port}`);
   console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
-  console.log(`📁 File upload: Cloudinary enabled\n`);
+  console.log(`📁 File upload: Cloudinary enabled`);
+  console.log(`🌐 CORS enabled with enableCors()\n`);
 }
 bootstrap();

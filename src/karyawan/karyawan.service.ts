@@ -484,15 +484,13 @@ export class KaryawanService {
           ? new Date(createKaryawanDto.tanggalMasuk)
           : new Date(),
 
-        // ✅ Candidate properties
         status: StatusKaryawan.candidate,
         statusKeaktifan: false,
 
-        // ❌ BELUM ada credentials
         username: null,
         passwordHash: null,
-        useJabatanRole: true, // Will be used when activated
-        isActive: false, // ❌ TIDAK bisa login
+        useJabatanRole: true,
+        isActive: false,
 
         // Reset auth fields
         lastLogin: null,
@@ -509,7 +507,6 @@ export class KaryawanService {
           jabatan: {
             include: {
               departemen: true,
-              // ❌ JANGAN include roleDefault untuk candidate
             },
           },
         },
@@ -543,7 +540,11 @@ export class KaryawanService {
       search,
     } = filterDto;
 
-    const skip = (page - 1) * limit;
+    // ✅ PARSE to number & validate
+    const validPage = Math.max(1, parseInt(page as string) || 1);
+    const validLimit = Math.max(1, parseInt(limit as string) || 10);
+
+    const skip = (validPage - 1) * validLimit;
     const where: any = {};
 
     if (status) where.status = status;
@@ -564,12 +565,12 @@ export class KaryawanService {
       this.prisma.refKaryawan.findMany({
         where,
         skip,
-        take: limit,
+        take: validLimit, // ✅ Use parsed number
         include: {
           jabatan: {
             include: {
               departemen: true,
-              roleDefault: true, // Always include untuk filtering
+              roleDefault: true,
             },
           },
         },
@@ -578,30 +579,36 @@ export class KaryawanService {
       this.prisma.refKaryawan.count({ where }),
     ]);
 
-    // ✅ Transform data: hapus roleDefault untuk candidate
+    // ✅ FIX: Safe transform dengan null check
     const data = rawData.map((karyawan) => {
+      // Check if jabatan exists
+      if (!karyawan.jabatan) {
+        return karyawan;
+      }
+
+      // Only transform for candidates
       if (karyawan.status === StatusKaryawan.candidate) {
-        // Destructure untuk hapus roleDefault
         const { roleDefault, ...jabatanSansRole } = karyawan.jabatan;
         return {
           ...karyawan,
           jabatan: jabatanSansRole,
         };
       }
+
       return karyawan;
     });
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / validLimit);
 
     return {
       data,
       meta: {
-        page,
-        limit,
+        page: validPage, // ✅ Return validated values
+        limit: validLimit,
         total,
         totalPages: totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+        hasNextPage: validPage < totalPages,
+        hasPrevPage: validPage > 1,
       },
     };
   }

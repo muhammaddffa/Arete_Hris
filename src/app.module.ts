@@ -21,6 +21,7 @@ import { SaldoCutiModule } from './saldocuti/saldo.cuti.module';
 import { PengajuanIzinModule } from './pengajuanizin/pengajuan-izin.module';
 import { PengajuanLemburModule } from './pengajuanlembur/pengajuan-lembur.module';
 import { AuthModule } from './auth/auth.module';
+import { RoleModule } from './role/role.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -60,6 +61,7 @@ import { AuthModule } from './auth/auth.module';
     PengajuanIzinModule,
     PengajuanLemburModule,
     AuthModule,
+    RoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
