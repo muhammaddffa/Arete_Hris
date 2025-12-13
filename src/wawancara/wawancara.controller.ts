@@ -41,15 +41,13 @@ import {
   StatusWawancara,
   JenisWawancara,
 } from '../model/blacklist-wawancara.model';
+// import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Wawancara')
 @Controller('wawancara')
 export class WawancaraController {
   constructor(private readonly wawancaraService: WawancaraService) {}
 
-  // ============================================
-  // CREATE WAWANCARA
-  // ============================================
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Schedule interview (HRD or User)' })
@@ -102,9 +100,6 @@ export class WawancaraController {
     );
   }
 
-  // ============================================
-  // GET WAWANCARA BY ID
-  // ============================================
   @Get(':id')
   @ApiOperation({ summary: 'Get interview by ID' })
   @ApiParam({
@@ -123,9 +118,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Data wawancara berhasil diambil');
   }
 
-  // ============================================
-  // GET BY PEWAWANCARA
-  // ============================================
   @Get('pewawancara/:idPewawancara')
   @ApiOperation({ summary: 'Get interviews by interviewer' })
   @ApiParam({ name: 'idPewawancara', type: String })
@@ -148,9 +140,6 @@ export class WawancaraController {
     );
   }
 
-  // ============================================
-  // GET BY PESERTA
-  // ============================================
   @Get('peserta/:idPeserta')
   @ApiOperation({ summary: 'Get interviews by candidate' })
   @ApiParam({ name: 'idPeserta', type: String })
@@ -166,9 +155,6 @@ export class WawancaraController {
     );
   }
 
-  // ============================================
-  // GET UPCOMING INTERVIEWS
-  // ============================================
   @Get('upcoming/list')
   @ApiOperation({ summary: 'Get upcoming scheduled interviews' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
@@ -181,9 +167,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Wawancara mendatang berhasil diambil');
   }
 
-  // ============================================
-  // UPDATE WAWANCARA
-  // ============================================
   @Patch(':id')
   @ApiOperation({ summary: 'Update interview' })
   @ApiParam({ name: 'id', type: String })
@@ -202,9 +185,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Data wawancara berhasil diupdate');
   }
 
-  // ============================================
-  // COMPLETE INTERVIEW
-  // ============================================
   @Post(':id/complete')
   @ApiOperation({ summary: 'Complete interview with result' })
   @ApiParam({ name: 'id', type: String })
@@ -222,9 +202,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Wawancara berhasil diselesaikan');
   }
 
-  // ============================================
-  // CANCEL INTERVIEW
-  // ============================================
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancel interview' })
   @ApiParam({ name: 'id', type: String })
@@ -248,9 +225,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Wawancara berhasil dibatalkan');
   }
 
-  // ============================================
-  // RESCHEDULE INTERVIEW
-  // ============================================
   @Post(':id/reschedule')
   @ApiOperation({ summary: 'Reschedule interview' })
   @ApiParam({ name: 'id', type: String })
@@ -284,9 +258,6 @@ export class WawancaraController {
     return ResponseUtil.success(data, 'Wawancara berhasil dijadwalkan ulang');
   }
 
-  // ============================================
-  // DELETE WAWANCARA
-  // ============================================
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete interview' })

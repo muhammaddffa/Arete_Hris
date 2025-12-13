@@ -21,22 +21,24 @@ import {
 } from './dto/jabatan.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Jabatan')
 @Controller('jabatan')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class JabatanController {
   constructor(private readonly jabatanService: JabatanService) {}
 
   // CREATE - Hanya HRD & Superadmin
   @Post()
+  @Public()
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jabatan')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jabatan')
   @ApiOperation({ summary: 'Create jabatan (HRD only)' })
   async create(@Body() createJabatanDto: CreateJabatanDto) {
     const data = await this.jabatanService.create(createJabatanDto);
@@ -45,6 +47,7 @@ export class JabatanController {
 
   // GET ALL - Semua yang login bisa lihat
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all jabatan' })
   async findAll(@Query() query: QueryJabatanDto) {
     const result = await this.jabatanService.findAll(query);
@@ -98,9 +101,10 @@ export class JabatanController {
 
   // DELETE - Hanya HRD & Superadmin
   @Delete(':id')
+  @Public()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jabatan')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jabatan')
   @ApiOperation({ summary: 'Delete jabatan (HRD only)' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.remove(id);

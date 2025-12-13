@@ -183,9 +183,6 @@ export class UpdateWawancaraDto {
   status?: StatusWawancara;
 }
 
-// ============================================
-// FILTER/QUERY DTO
-// ============================================
 export class FilterWawancaraDto {
   @ApiPropertyOptional({
     description: 'Filter by status',
@@ -303,9 +300,6 @@ export class FilterWawancaraDto {
   includeRelations?: boolean = true;
 }
 
-// ============================================
-// COMPLETE WAWANCARA DTO
-// ============================================
 export class CompleteWawancaraDto {
   @ApiProperty({
     description: 'Hasil wawancara',
@@ -326,10 +320,6 @@ export class CompleteWawancaraDto {
   @Type(() => Number)
   nilaiHasil: number;
 }
-
-// ============================================
-// RESPONSE DTOs
-// ============================================
 export class WawancaraResponseDto {
   @ApiProperty()
   idWawancara: string;
