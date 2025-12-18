@@ -22,6 +22,8 @@ import { PengajuanIzinModule } from './pengajuanizin/pengajuan-izin.module';
 import { PengajuanLemburModule } from './pengajuanlembur/pengajuan-lembur.module';
 import { AuthModule } from './auth/auth.module';
 import { RoleModule } from './role/role.module';
+import { FormModule } from './form/form.module';
+import { QuestionModule } from './question/question.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -62,6 +64,8 @@ import { RoleModule } from './role/role.module';
     PengajuanLemburModule,
     AuthModule,
     RoleModule,
+    FormModule,
+    QuestionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -780,7 +780,6 @@ export class KaryawanService {
       },
     });
 
-    // ✅ 5. Assign role jabatan ke karyawan_role table
     await this.prisma.karyawanRole.create({
       data: {
         idKaryawan: id,
@@ -794,8 +793,8 @@ export class KaryawanService {
         'Candidate berhasil di-approve. Account sudah aktif dan bisa login.',
       credentials: {
         username,
-        password: plainPassword, // ⚠️ Plain password - CATAT!
-        info: '⚠️ PENTING: Simpan password ini! Di database sudah ter-hash.',
+        password: plainPassword,
+        info: 'Simpan password ini! Di database sudah ter-hash.',
       },
       role: updated.jabatan.roleDefault,
       permissions: updated.jabatan.roleDefault.permissions.map(
@@ -804,9 +803,6 @@ export class KaryawanService {
     };
   }
 
-  /**
-   * Reject candidate
-   */
   async rejectCandidate(id: string) {
     const karyawan = await this.findOneRaw(id);
 
@@ -825,9 +821,6 @@ export class KaryawanService {
     return updated;
   }
 
-  /**
-   * Resign karyawan
-   */
   async resignKaryawan(id: string, tanggalResign?: Date) {
     const karyawan = await this.findOneRaw(id);
 
