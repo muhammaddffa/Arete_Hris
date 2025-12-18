@@ -117,6 +117,10 @@ async function bootstrap() {
     .addTag('Jenis Izin', 'Leave type management endpoints')
     .addTag('Saldo Cuti', 'Leave balance management endpoints')
     .addTag('Pengajuan Izin', 'Leave application management endpoints')
+    .addTag('Perizinan', 'Permission management endpoints')
+    .addTag('Pengumuman', 'Announcement management endpoints')
+    .addTag('Form', 'Dynamic form management endpoints')
+    .addTag('Question', 'Dynamic question management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
