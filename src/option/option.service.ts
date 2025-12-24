@@ -59,7 +59,7 @@ export class OptionService {
     }
 
     try {
-      return await this.prisma.$transaction(
+      const createdOptions = await this.prisma.$transaction(
         bulkCreateDto.options.map((opt) =>
           this.prisma.refOption.create({
             data: {
@@ -71,6 +71,8 @@ export class OptionService {
           }),
         ),
       );
+
+      return createdOptions;
     } catch (error) {
       throw new BadRequestException(
         `Gagal membuat opsi secara bulk: ${error.message}`,

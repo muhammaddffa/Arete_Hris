@@ -24,6 +24,8 @@ import { AuthModule } from './auth/auth.module';
 import { RoleModule } from './role/role.module';
 import { FormModule } from './form/form.module';
 import { QuestionModule } from './question/question.module';
+import { OptionModule } from './option/option.module';
+import { AnswerModule } from './answer/answer.module';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
@@ -66,6 +68,8 @@ import { QuestionModule } from './question/question.module';
     RoleModule,
     FormModule,
     QuestionModule,
+    OptionModule,
+    AnswerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

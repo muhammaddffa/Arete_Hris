@@ -23,8 +23,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseUtil } from '../common/utils/response.util';
 import { validateUuid } from './form.validation';
 import { RESPONSE_MESSAGES } from 'src/common/constants/response-messages.constant';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('forms')
+@ApiTags('Form')
 // @UseGuards(JwtAuthGuard)
 export class FormController {
   constructor(private readonly formService: FormService) {}
