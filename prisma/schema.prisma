@@ -463,9 +463,9 @@ model RefQuestion {
   idQuestion   String   @id @default(uuid()) @map("id_question") @db.Uuid
   idForm       String   @map("id_form") @db.Uuid
   nameQuestion String   @map("name_question") @db.VarChar(500)
-  questionType String   @map("question_type") @db.VarChar(50) // 'text', 'single_choice', 'multiple_choice', 'rating', 'textarea'
+  questionType String   @map("question_type") @db.VarChar(50)
   isRequired   Boolean  @default(false) @map("is_required")
-  orderNumber  Int      @map("order_number") // untuk urutan pertanyaan
+  orderNumber  Int      @map("order_number")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -483,7 +483,7 @@ model RefOption {
   idOption     String   @id @default(uuid()) @map("id_option") @db.Uuid
   idQuestion   String   @map("id_question") @db.Uuid
   optionText   String   @map("option_text") @db.VarChar(300)
-  optionValue  String?  @map("option_value") @db.VarChar(100) // untuk nilai numerik/kode
+  optionValue  String?  @map("option_value") @db.VarChar(100)
   orderNumber  Int      @map("order_number")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -501,8 +501,8 @@ model Answer {
   idForm     String   @map("id_form") @db.Uuid
   idQuestion String   @map("id_question") @db.Uuid
   idKaryawan String   @map("id_karyawan") @db.Uuid
-  idOption   String?  @map("id_option") @db.Uuid // null untuk jawaban text/textarea
-  textAnswer String?  @map("text_answer") @db.Text // untuk jawaban text/textarea
+  idOption   String?  @map("id_option") @db.Uuid 
+  textAnswer String?  @map("text_answer") @db.Text
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

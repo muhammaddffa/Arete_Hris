@@ -121,6 +121,8 @@ async function bootstrap() {
     .addTag('Pengumuman', 'Announcement management endpoints')
     .addTag('Form', 'Dynamic form management endpoints')
     .addTag('Question', 'Dynamic question management endpoints')
+    .addTag('Option', 'Dynamic option management endpoints')
+    .addTag('Answer', 'Dynamic answer management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
