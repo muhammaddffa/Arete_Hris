@@ -1,4 +1,3 @@
-// src/jabatan/jabatan.controller.ts
 import {
   Controller,
   Get,
@@ -11,51 +10,45 @@ import {
   HttpStatus,
   HttpCode,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JabatanService } from './jabatan.service';
 import {
   CreateJabatanDto,
   UpdateJabatanDto,
   QueryJabatanDto,
-  JabatanResponseDto,
 } from './dto/jabatan.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
+// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Jabatan')
 @Controller('jabatan')
+// @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class JabatanController {
   constructor(private readonly jabatanService: JabatanService) {}
 
+  // CREATE - Hanya HRD & Superadmin
   @Post()
+  @Public()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create new jabatan' })
-  @ApiResponse({
-    status: 201,
-    description: 'Jabatan berhasil dibuat',
-    type: JabatanResponseDto,
-  })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jabatan')
+  @ApiOperation({ summary: 'Create jabatan (HRD only)' })
   async create(@Body() createJabatanDto: CreateJabatanDto) {
     const data = await this.jabatanService.create(createJabatanDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.JABATAN.CREATED);
   }
 
+  // GET ALL - Semua yang login bisa lihat
   @Get()
-  @ApiOperation({ summary: 'Get all jabatan with filters and pagination' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of jabatan',
-    type: [JabatanResponseDto],
-  })
+  @Public()
+  @ApiOperation({ summary: 'Get all jabatan' })
   async findAll(@Query() query: QueryJabatanDto) {
     const result = await this.jabatanService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -65,18 +58,9 @@ export class JabatanController {
     );
   }
 
+  // GET BY DEPARTEMEN - Semua yang login bisa lihat
   @Get('departemen/:idDepartemen')
-  @ApiOperation({ summary: 'Get active jabatan by departemen' })
-  @ApiParam({
-    name: 'idDepartemen',
-    description: 'Departemen ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of jabatan in departemen',
-    type: [JabatanResponseDto],
-  })
+  @ApiOperation({ summary: 'Get jabatan by departemen' })
   async getByDepartemen(
     @Param('idDepartemen', ParseUUIDPipe) idDepartemen: string,
   ) {
@@ -84,56 +68,29 @@ export class JabatanController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.LIST);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get jabatan by ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'Jabatan ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Jabatan found',
-    type: JabatanResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Jabatan not found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.jabatanService.findOne(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.FOUND);
-  }
-
+  // GET STATS - Hanya HRD & Manager
   @Get(':id/stats')
-  @ApiOperation({ summary: 'Get jabatan statistics' })
-  @ApiParam({
-    name: 'id',
-    description: 'Jabatan ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Jabatan statistics including total karyawan aktif and non-aktif',
-  })
-  @ApiResponse({ status: 404, description: 'Jabatan not found' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('view_all_karyawan')
+  @ApiOperation({ summary: 'Get jabatan statistics (HRD & Manager)' })
   async getJabatanStats(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.getJabatanStats(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.FOUND);
   }
 
+  // GET ONE - Semua yang login bisa lihat
+  @Get(':id')
+  @ApiOperation({ summary: 'Get jabatan by ID' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.jabatanService.findOne(id);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.FOUND);
+  }
+
+  // UPDATE - Hanya HRD & Superadmin
   @Patch(':id')
-  @ApiOperation({ summary: 'Update jabatan' })
-  @ApiParam({
-    name: 'id',
-    description: 'Jabatan ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Jabatan berhasil diupdate',
-    type: JabatanResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Jabatan not found' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('manage_jabatan')
+  @ApiOperation({ summary: 'Update jabatan (HRD only)' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateJabatanDto: UpdateJabatanDto,
@@ -142,26 +99,13 @@ export class JabatanController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.UPDATED);
   }
 
+  // DELETE - Hanya HRD & Superadmin
   @Delete(':id')
+  @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete jabatan' })
-  @ApiParam({
-    name: 'id',
-    description: 'Jabatan ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Jabatan berhasil dihapus',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Jabatan not found',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Cannot delete jabatan with existing karyawan',
-  })
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jabatan')
+  @ApiOperation({ summary: 'Delete jabatan (HRD only)' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.remove(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.DELETED);

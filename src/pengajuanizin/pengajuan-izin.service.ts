@@ -100,9 +100,14 @@ export class PengajuanIzinService {
 
     return this.prisma.pengajuanIzin.create({
       data: {
-        ...createDto,
+        idKaryawan: createDto.idKaryawan,
+        idJenisIzin: createDto.idJenisIzin,
         tanggalMulai: tanggalMulai,
         tanggalSelesai: tanggalSelesai,
+        jumlahHari: createDto.jumlahHari,
+        keterangan: createDto.keterangan,
+        pathBukti: createDto.pathBukti, // Cloudinary URL
+        idAtasan: createDto.idAtasan,
         statusPersetujuan: 'pending',
       },
       include: {
@@ -200,6 +205,26 @@ export class PengajuanIzinService {
             nama: true,
           },
         },
+      },
+    });
+
+    if (!pengajuan) {
+      throw new NotFoundException(
+        `Pengajuan izin dengan ID ${id} tidak ditemukan`,
+      );
+    }
+
+    return pengajuan;
+  }
+
+  // Find raw data (for internal use - get pathBukti for delete)
+  async findOneRaw(id: string) {
+    const pengajuan = await this.prisma.pengajuanIzin.findUnique({
+      where: { idPengajuanIzin: id },
+      select: {
+        idPengajuanIzin: true,
+        pathBukti: true,
+        statusPersetujuan: true,
       },
     });
 

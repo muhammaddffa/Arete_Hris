@@ -257,10 +257,42 @@ export class CloudinaryService {
    */
   extractPublicId(url: string): string | null {
     try {
-      // Example URL: https://res.cloudinary.com/demo/image/upload/v1234567890/folder/filename.jpg
-      const matches = url.match(/\/v\d+\/(.+)\.\w+$/);
-      return matches ? matches[1] : null;
-    } catch {
+      if (!url || !url.includes('cloudinary.com')) {
+        return null;
+      }
+
+      // Split by /upload/
+      const parts = url.split('/upload/');
+      if (parts.length < 2) {
+        return null;
+      }
+
+      // Get everything after /upload/
+      const pathWithVersion = parts[1];
+
+      // Split by /
+      const pathParts = pathWithVersion.split('/');
+
+      // Remove version (starts with 'v' followed by numbers)
+      const withoutVersion = pathParts.filter((part) => !part.match(/^v\d+$/));
+
+      // Join back
+      const pathWithExt = withoutVersion.join('/');
+
+      // Remove file extension (everything after last dot)
+      const lastDotIndex = pathWithExt.lastIndexOf('.');
+      if (lastDotIndex === -1) {
+        return pathWithExt;
+      }
+
+      const publicId = pathWithExt.substring(0, lastDotIndex);
+
+      return publicId || null;
+    } catch (error) {
+      this.logger.error(
+        'Error extracting public_id from Cloudinary URL:',
+        error,
+      );
       return null;
     }
   }

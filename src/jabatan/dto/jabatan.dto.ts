@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsUUID,
   IsBoolean,
+  IsInt,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -27,6 +28,23 @@ export class CreateJabatanDto {
   @IsUUID()
   @IsNotEmpty()
   idDepartemen: string;
+
+  @ApiProperty({
+    description: 'ID Role Default untuk jabatan ini',
+    example: 4,
+  })
+  @IsInt()
+  @IsNotEmpty()
+  @Type(() => Number)
+  idRoleDefault: number;
+
+  @ApiPropertyOptional({
+    description: 'ID Atasan (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID()
+  @IsOptional()
+  idAtasan?: string;
 
   @ApiPropertyOptional({
     description: 'Deskripsi jabatan',
@@ -65,6 +83,23 @@ export class UpdateJabatanDto {
   @IsUUID()
   @IsOptional()
   idDepartemen?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID Role Default untuk jabatan ini',
+    example: 4,
+  })
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  idRoleDefault?: number;
+
+  @ApiPropertyOptional({
+    description: 'ID Atasan (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID()
+  @IsOptional()
+  idAtasan?: string;
 
   @ApiPropertyOptional({
     description: 'Deskripsi jabatan',
@@ -139,6 +174,12 @@ export class JabatanResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   idDepartemen: string;
 
+  @ApiProperty({ example: 4 })
+  idRoleDefault: number;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  idAtasan: string | null;
+
   @ApiProperty({ example: 'Bertanggung jawab untuk develop aplikasi' })
   deskripsiJabatan: string | null;
 
@@ -155,10 +196,14 @@ export class JabatanResponseDto {
   departemen?: {
     idDepartemen: string;
     namaDepartemen: string;
-    roleDefault: {
-      idRole: number;
-      namaRole: string;
-    };
+    deskripsi: string | null;
+  };
+
+  @ApiPropertyOptional()
+  roleDefault?: {
+    idRole: number;
+    namaRole: string;
+    level: number;
   };
 
   @ApiPropertyOptional()

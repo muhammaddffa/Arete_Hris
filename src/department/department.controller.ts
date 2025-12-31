@@ -10,6 +10,7 @@ import {
   HttpStatus,
   HttpCode,
   ParseUUIDPipe,
+  // UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { DepartmentService } from './department.service';
 import {
@@ -30,13 +32,23 @@ import {
 } from './dto/department.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
+// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+// import { Permissions } from 'src/auth/decorators/permissions.decorator';
+// import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
+// import { Roles } from 'src/auth/decorators/roles.decorator';
+// import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Departemen')
 @Controller('department')
+// @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) {}
 
   @Post()
+  @Public()
+  // @Roles(2)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create new department' })
   @ApiResponse({
@@ -52,6 +64,8 @@ export class DepartmentController {
   }
 
   @Get()
+  @Public()
+  // @Roles(2)
   @ApiOperation({
     summary: 'Get all departments with pagination, search, and filters',
     description: 'Search by name, filter by role, with pagination support',
@@ -111,9 +125,6 @@ export class DepartmentController {
     return ResponseUtil.success(results, 'Autocomplete results');
   }
 
-  // ==========================================
-  // NEW: GET ALL STATS
-  // ==========================================
   @Get('stats/summary')
   @ApiOperation({ summary: 'Get all departments statistics summary' })
   @ApiResponse({

@@ -1,3 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -6,8 +13,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
-// eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
 async function setupUploadDirectories() {
   const uploadDirs = [
     'uploads',
@@ -36,25 +43,48 @@ async function setupUploadDirectories() {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Enable CORS
   app.enableCors({
-    origin: 'http://localhost:5173', // Ganti dengan URL frontend React Anda
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'ngrok-skip-browser-warning',
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  });
+
+  app.use((req: any, res: any, next: any) => {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+      console.log('\n🔍 RAW REQUEST CHECK:');
+      console.log('- Readable:', req.readable);
+      console.log('- ReadableEnded:', req.readableEnded);
+      console.log(
+        '- Body already parsed?:',
+        Object.keys(req.body || {}).length > 0,
+      );
+    }
+    next();
   });
 
   app.setGlobalPrefix('api');
 
   app.useGlobalInterceptors(new ResponseInterceptor());
-
   app.useGlobalFilters(new HttpExceptionFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false,
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
@@ -87,15 +117,23 @@ async function bootstrap() {
     .addTag('Jenis Izin', 'Leave type management endpoints')
     .addTag('Saldo Cuti', 'Leave balance management endpoints')
     .addTag('Pengajuan Izin', 'Leave application management endpoints')
+    .addTag('Perizinan', 'Permission management endpoints')
+    .addTag('Pengumuman', 'Announcement management endpoints')
+    .addTag('Form', 'Dynamic form management endpoints')
+    .addTag('Question', 'Dynamic question management endpoints')
+    .addTag('Option', 'Dynamic option management endpoints')
+    .addTag('Answer', 'Dynamic answer management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3333;
   await app.listen(port);
 
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`\n🚀 Application is running on: http://localhost:${port}`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`📁 File upload: Cloudinary enabled`);
+  console.log(`🌐 CORS enabled with enableCors()\n`);
 }
 bootstrap();

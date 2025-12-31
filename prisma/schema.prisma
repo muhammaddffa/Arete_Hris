@@ -1,7 +1,3 @@
-// prisma/schema.prisma
-// This is your Prisma schema file
-// Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,23 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-// ============================================
-// RBAC - ROLE & PERMISSION (INT - Master Data)
-// ============================================
-
 model RefRole {
   idRole    Int      @id @default(autoincrement()) @map("id_role")
   namaRole  String   @unique @map("nama_role") @db.VarChar(50)
   deskripsi String?  @db.Text
-  level     Int      // 1=superadmin, 2=admin/hrd/finance, 3=manager, 4=karyawan
+  level     Int // 1=superadmin, 2=admin/hrd/finance, 3=manager, 4=karyawan
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  departemen  RefDepartemen[]
-  permissions RolePermission[]
-  userRoles   UserRole[]
+  jabatan       RefJabatan[]
+  permissions   RolePermission[]
+  karyawanRoles KaryawanRole[]
 
   @@map("refrole")
 }
@@ -38,8 +29,9 @@ model RefPermission {
   deskripsi      String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
 
-  // Relations
-  roles RolePermission[]
+  roles                       RolePermission[]
+  karyawanPermissionOverrides KaryawanPermissionOverride[]
+  permissionAuditLogs         PermissionAuditLog[]
 
   @@map("refpermission")
 }
@@ -48,7 +40,6 @@ model RolePermission {
   idRole       Int @map("id_role")
   idPermission Int @map("id_permission")
 
-  // Relations
   role       RefRole       @relation(fields: [idRole], references: [idRole], onDelete: Cascade)
   permission RefPermission @relation(fields: [idPermission], references: [idPermission], onDelete: Cascade)
 
@@ -56,42 +47,40 @@ model RolePermission {
   @@map("role_permission")
 }
 
-// ============================================
-// MASTER DATA - DEPARTEMEN & JABATAN (UUID)
-// ============================================
 
 model RefDepartemen {
   idDepartemen   String   @id @default(uuid()) @map("id_departemen") @db.Uuid
   namaDepartemen String   @unique @map("nama_departemen") @db.VarChar(100)
-  idRoleDefault  Int      @map("id_role_default") // INT - FK ke RefRole
   deskripsi      String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  roleDefault RefRole      @relation(fields: [idRoleDefault], references: [idRole])
-  jabatan     RefJabatan[]
+  jabatan RefJabatan[]
 
-  @@index([idRoleDefault])
   @@map("refdepartemen")
 }
 
 model RefJabatan {
-  idJabatan        String        @id @default(uuid()) @map("id_jabatan") @db.Uuid
-  namaJabatan      String        @map("nama_jabatan") @db.VarChar(100)
-  idDepartemen     String        @map("id_departemen") @db.Uuid
-  idAtasan         String?       @map("id_atasan") @db.Uuid // Self-reference ke karyawan
-  deskripsiJabatan String?       @map("deskripsi_jabatan") @db.Text
-  status           Boolean       @default(true)
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
+  idJabatan        String   @id @default(uuid()) @map("id_jabatan") @db.Uuid
+  namaJabatan      String   @map("nama_jabatan") @db.VarChar(100)
+  idDepartemen     String   @map("id_departemen") @db.Uuid
+  idRoleDefault    Int      @map("id_role_default")
+  idAtasan         String?  @map("id_atasan") @db.Uuid
+  deskripsiJabatan String?  @map("deskripsi_jabatan") @db.Text
+  status           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
-  departemen RefDepartemen @relation(fields: [idDepartemen], references: [idDepartemen], onDelete: Restrict)
-  atasan     RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
-  karyawan   RefKaryawan[] @relation("KaryawanJabatan")
+  departemen  RefDepartemen @relation(fields: [idDepartemen], references: [idDepartemen], onDelete: Restrict)
+  roleDefault RefRole       @relation(fields: [idRoleDefault], references: [idRole])
+  atasan      RefKaryawan?  @relation("AtasanJabatan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
+  karyawan    RefKaryawan[] @relation("KaryawanJabatan")
 
+  @@unique([namaJabatan, idDepartemen])
   @@index([idDepartemen])
+  @@index([idRoleDefault])
   @@index([idAtasan])
   @@map("refjabatan")
 }
@@ -104,8 +93,8 @@ enum StatusKaryawan {
 }
 
 enum JenisKelamin {
-  L // Laki-laki
-  P // Perempuan
+  L
+  P
 }
 
 enum StatusPernikahan {
@@ -114,95 +103,119 @@ enum StatusPernikahan {
   cerai
 }
 
-// ============================================
-// USER & AUTHENTICATION (UUID) - UNTUK NANTI
-// ============================================
+model RefKaryawan {
+  idKaryawan       String           @id @default(uuid()) @map("id_karyawan") @db.Uuid
+  nik              String?          @unique @db.VarChar(20)
+  npwp             String?          @db.VarChar(30)
+  skck             String?          @db.VarChar(255)
+  suratKesehatan   String?          @map("surat_kesehatan") @db.VarChar(255)
+  cv               String?          @db.VarChar(255)
+  nama             String           @db.VarChar(100)
+  tempatLahir      String           @map("tempat_lahir") @db.VarChar(100)
+  tanggalLahir     DateTime         @map("tanggal_lahir") @db.Date
+  jenisKelamin     JenisKelamin     @map("jenis_kelamin")
+  statusPernikahan StatusPernikahan @map("status_pernikahan")
+  pasfoto          String?          @db.VarChar(255)
+  agama            String           @db.VarChar(20)
+  noHpPribadi      String           @map("no_hp_pribadi") @db.VarChar(20)
+  email            String?          @db.VarChar(100)
+  alamat           String?          @db.Text
+  idJabatan        String           @map("id_jabatan") @db.Uuid
+  namaBank         String?          @map("nama_bank") @db.VarChar(50)
+  nomorRekening    String?          @map("nomor_rekening") @db.VarChar(50)
+  statusKeaktifan  Boolean          @default(true) @map("status_keaktifan")
+  tanggalMasuk     DateTime         @map("tanggal_masuk") @db.Date
+  tanggalResign    DateTime?        @map("tanggal_resign") @db.Date
+  status           StatusKaryawan   @default(candidate)
 
-model User {
-  idUser            String    @id @default(uuid()) @map("id_user") @db.Uuid
-  idKaryawan        String?   @unique @map("id_karyawan") @db.Uuid
-  username          String    @unique @db.VarChar(50)
-  email             String    @unique @db.VarChar(100)
-  passwordHash      String    @map("password_hash") @db.VarChar(255)
-  useDepartmentRole Boolean   @default(true) @map("use_department_role")
+  username          String?   @unique @db.VarChar(50)
+  passwordHash      String?   @map("password_hash") @db.VarChar(255)
+  useJabatanRole    Boolean   @default(true) @map("use_jabatan_role") // true = pakai role jabatan, false = custom role
   isActive          Boolean   @default(true) @map("is_active")
   lastLogin         DateTime? @map("last_login")
+  answers           Answer[]
   loginAttempts     Int       @default(0) @map("login_attempts")
   lockedUntil       DateTime? @map("locked_until")
   resetToken        String?   @map("reset_token") @db.VarChar(100)
   resetTokenExpires DateTime? @map("reset_token_expires")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  karyawan  RefKaryawan? @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: SetNull)
-  userRoles UserRole[]
+  jabatan                     RefJabatan        @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan], onDelete: Restrict)
+  jabatanAtasan               RefJabatan[]      @relation("AtasanJabatan")
+  blacklist                   RefBlacklist?
+  wawancaraSebagaiPewawancara RefWawancara[]    @relation("PewawancaraWawancara")
+  wawancaraSebagaiPeserta     RefWawancara[]    @relation("PesertaWawancara")
+  karyawanJadwal              KaryawanJadwal[]
+  presensi                    Presensi[]
+  saldoCuti                   RefSaldoCuti[]
+  pengajuanIzin               PengajuanIzin[]   @relation("PengajuanIzinKaryawan")
+  pengajuanIzinAsAtasan       PengajuanIzin[]   @relation("PengajuanIzinAtasan")
+  pengajuanLembur             PengajuanLembur[] @relation("PengajuanLemburKaryawan")
+  pengajuanLemburAsAtasan     PengajuanLembur[] @relation("PengajuanLemburAtasan")
 
-  @@index([username])
-  @@index([email])
-  @@index([idKaryawan])
-  @@map("users")
-}
-
-model UserRole {
-  idUser String @map("id_user") @db.Uuid
-  idRole Int    @map("id_role") // INT - FK ke RefRole
-
-  // Relations
-  user User    @relation(fields: [idUser], references: [idUser], onDelete: Cascade)
-  role RefRole @relation(fields: [idRole], references: [idRole], onDelete: Cascade)
-
-  @@id([idUser, idRole])
-  @@map("user_role")
-}
-
-model RefKaryawan {
-  idKaryawan       String            @id @default(uuid()) @map("id_karyawan") @db.Uuid
-  nik              String?           @unique @db.VarChar(20)
-  npwp             String?           @db.VarChar(30)
-  skck             String?           @db.VarChar(255)
-  suratKesehatan   String?           @map("surat_kesehatan") @db.VarChar(255)
-  cv               String?           @db.VarChar(255)
-  nama             String            @db.VarChar(100)
-  tempatLahir      String            @map("tempat_lahir") @db.VarChar(100)
-  tanggalLahir     DateTime          @map("tanggal_lahir") @db.Date
-  jenisKelamin     JenisKelamin      @map("jenis_kelamin")
-  statusPernikahan StatusPernikahan  @map("status_pernikahan")
-  pasfoto          String?           @db.VarChar(255)
-  agama            String            @db.VarChar(20)
-  noHpPribadi      String            @map("no_hp_pribadi") @db.VarChar(20)
-  email            String?           @db.VarChar(100)
-  alamat           String?           @db.Text
-  idJabatan        String            @map("id_jabatan") @db.Uuid
-  namaBank         String?           @map("nama_bank") @db.VarChar(50)
-  nomorRekening    String?           @map("nomor_rekening") @db.VarChar(50)
-  statusKeaktifan  Boolean           @default(true) @map("status_keaktifan")
-  tanggalMasuk     DateTime          @map("tanggal_masuk") @db.Date
-  tanggalResign    DateTime?         @map("tanggal_resign") @db.Date
-  status           StatusKaryawan    @default(candidate)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-
-  // Relations
-  jabatan                         RefJabatan     @relation("KaryawanJabatan", fields: [idJabatan], references: [idJabatan], onDelete: Restrict)
-  jabatanAtasan                   RefJabatan[]   @relation("AtasanJabatan")
-  user                            User?
-  blacklist                       RefBlacklist?
-  wawancaraSebagaiPewawancara      RefWawancara[]    @relation("PewawancaraWawancara")
-  wawancaraSebagaiPeserta         RefWawancara[]    @relation("PesertaWawancara")
-  karyawanJadwal           KaryawanJadwal[]
-  presensi                 Presensi[]
-  saldoCuti                RefSaldoCuti[]
-  pengajuanIzin            PengajuanIzin[]      @relation("PengajuanIzinKaryawan")
-  pengajuanIzinAsAtasan    PengajuanIzin[]      @relation("PengajuanIzinAtasan")
-  pengajuanLembur          PengajuanLembur[]    @relation("PengajuanLemburKaryawan")
-  pengajuanLemburAsAtasan  PengajuanLembur[]    @relation("PengajuanLemburAtasan")
+  // NEW: Custom Role & Permission Relations
+  karyawanRoles               KaryawanRole[]
+  karyawanPermissionOverrides KaryawanPermissionOverride[]
+  permissionAuditLogs         PermissionAuditLog[]         @relation("AuditSubject")
+  grantedPermissionsLog       PermissionAuditLog[]         @relation("AuditGrantor")
 
   @@index([idJabatan])
   @@index([nik])
   @@index([status])
   @@index([statusKeaktifan])
+  @@index([username])
   @@map("refkaryawan")
+}
+
+// Table untuk custom role karyawan (jika tidak pakai role jabatan)
+model KaryawanRole {
+  idKaryawan String @map("id_karyawan") @db.Uuid
+  idRole     Int    @map("id_role")
+
+  karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  role     RefRole     @relation(fields: [idRole], references: [idRole], onDelete: Cascade)
+
+  @@id([idKaryawan, idRole])
+  @@map("karyawan_role")
+}
+
+// Table untuk override permission individual karyawan
+model KaryawanPermissionOverride {
+  idKaryawan     String  @map("id_karyawan") @db.Uuid
+  idPermission   Int     @map("id_permission")
+  typePermission Boolean @map("type_permission") // true = add permission, false = remove permission
+  deskripsi      String? @db.Text
+
+  karyawan   RefKaryawan   @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  permission RefPermission @relation(fields: [idPermission], references: [idPermission], onDelete: Cascade)
+
+  @@id([idKaryawan, idPermission])
+  @@map("karyawan_permission_override")
+}
+
+
+model PermissionAuditLog {
+  idLog          String   @id @default(uuid()) @map("id_log") @db.Uuid
+  idKaryawan     String   @map("id_karyawan") @db.Uuid
+  idPermission   Int      @map("id_permission")
+  action         String   @db.VarChar(20) // 'ADD' | 'REMOVE' | 'DELETE_OVERRIDE'
+  typePermission Boolean? @map("type_permission") // true = ADD, false = REMOVE (for ADD/REMOVE actions)
+  grantedBy      String   @map("granted_by") @db.Uuid
+  deskripsi      String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  karyawan   RefKaryawan   @relation("AuditSubject", fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  permission RefPermission @relation(fields: [idPermission], references: [idPermission], onDelete: Cascade)
+  grantor    RefKaryawan   @relation("AuditGrantor", fields: [grantedBy], references: [idKaryawan], onDelete: Cascade)
+
+  @@index([idKaryawan])
+  @@index([grantedBy])
+  @@index([action])
+  @@index([createdAt])
+  @@map("permission_audit_log")
 }
 
 model RefBlacklist {
@@ -223,9 +236,9 @@ model RefBlacklist {
 }
 
 enum StatusWawancara {
-  scheduled   
-  completed   
-  cancelled   
+  scheduled
+  completed
+  cancelled
   rescheduled
 }
 
@@ -234,21 +247,21 @@ enum JenisWawancara {
   user
 }
 
-model RefWawancara{
-  idWawancara      String           @id @default(uuid()) @map("id_wawancara") @db.Uuid
-  idPewawancara    String           @map("id_pewawancara") @db.Uuid
-  idPeserta        String           @map("id_peserta") @db.Uuid
-  jenisWawancara   JenisWawancara   @map("jenis_wawancara") @default(hrd)
-  tanggalWawancara DateTime         @map("tanggal_wawancara") @db.Date
-  jamWawancara     String           @map("jam_wawancara") @db.VarChar(5) // Format: "HH:MM"
-  lokasi           String?          @db.VarChar(255)
-  linkOnline       String?          @map("link_online") @db.VarChar(500) // Untuk meeting online
-  catatan          String?          @db.Text
-  hasil            String?          @db.Text
-  nilaiHasil       Int?             @map("nilai_hasil") // Rating 1-10
-  status           StatusWawancara  @default(scheduled)
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+model RefWawancara {
+  idWawancara      String          @id @default(uuid()) @map("id_wawancara") @db.Uuid
+  idPewawancara    String          @map("id_pewawancara") @db.Uuid
+  idPeserta        String          @map("id_peserta") @db.Uuid
+  jenisWawancara   JenisWawancara  @default(hrd) @map("jenis_wawancara")
+  tanggalWawancara DateTime        @map("tanggal_wawancara") @db.Date
+  jamWawancara     String          @map("jam_wawancara") @db.VarChar(5)
+  lokasi           String?         @db.VarChar(255)
+  linkOnline       String?         @map("link_online") @db.VarChar(500)
+  catatan          String?         @db.Text
+  hasil            String?         @db.Text
+  nilaiHasil       Int?            @map("nilai_hasil")
+  status           StatusWawancara @default(scheduled)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
 
   pewawancara RefKaryawan @relation("PewawancaraWawancara", fields: [idPewawancara], references: [idKaryawan], onDelete: Restrict)
   peserta     RefKaryawan @relation("PesertaWawancara", fields: [idPeserta], references: [idKaryawan], onDelete: Restrict)
@@ -262,16 +275,15 @@ model RefWawancara{
 }
 
 model RefJadwalKerja {
-  idJadwal    String   @id @default(uuid()) @map("id_jadwal") @db.Uuid
-  kodeJadwal  String   @unique @map("kode_jadwal") @db.VarChar(20)
-  namaJadwal  String   @map("nama_jadwal") @db.VarChar(100)
-  jamMasuk    String?   @map("jam_masuk") @db.VarChar(5) // Format: "HH:MM"
-  jamPulang   String?   @map("jam_pulang") @db.VarChar(5) // Format: "HH:MM"
-  hariKerja   String[] @map("hari_kerja") // Array: ["senin", "selasa", ...]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  idJadwal   String   @id @default(uuid()) @map("id_jadwal") @db.Uuid
+  kodeJadwal String   @unique @map("kode_jadwal") @db.VarChar(20)
+  namaJadwal String   @map("nama_jadwal") @db.VarChar(100)
+  jamMasuk   String?  @map("jam_masuk") @db.VarChar(5)
+  jamPulang  String?  @map("jam_pulang") @db.VarChar(5)
+  hariKerja  String[] @map("hari_kerja")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  // Relations
   karyawanJadwal KaryawanJadwal[]
 
   @@index([kodeJadwal])
@@ -279,15 +291,14 @@ model RefJadwalKerja {
 }
 
 model KaryawanJadwal {
-  idKaryawanJadwal    String    @id @default(uuid()) @map("id_karyawan_jadwal") @db.Uuid
-  idKaryawan          String    @map("id_karyawan") @db.Uuid
-  idJadwal            String    @map("id_jadwal") @db.Uuid
-  tanggalMulaiEfektif DateTime  @map("tanggal_mulai_efektif") @db.Date
+  idKaryawanJadwal      String    @id @default(uuid()) @map("id_karyawan_jadwal") @db.Uuid
+  idKaryawan            String    @map("id_karyawan") @db.Uuid
+  idJadwal              String    @map("id_jadwal") @db.Uuid
+  tanggalMulaiEfektif   DateTime  @map("tanggal_mulai_efektif") @db.Date
   tanggalSelesaiEfektif DateTime? @map("tanggal_selesai_efektif") @db.Date
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  // Relations
   karyawan RefKaryawan    @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
   jadwal   RefJadwalKerja @relation(fields: [idJadwal], references: [idJadwal], onDelete: Restrict)
 
@@ -317,22 +328,21 @@ enum SumberPresensi {
 }
 
 model Presensi {
-  idPresensi       String           @id @default(uuid()) @map("id_presensi") @db.Uuid
-  idKaryawan       String           @map("id_karyawan") @db.Uuid
-  tanggalPresensi  DateTime         @map("tanggal_presensi") @db.Date
-  waktuClockIn     DateTime?        @map("waktu_clock_in") @db.Timestamptz(3)
-  waktuClockOut    DateTime?        @map("waktu_clock_out") @db.Timestamptz(3)
-  statusKehadiran  StatusKehadiran  @map("status_kehadiran") @default(hadir)
-  sumberPresensi   SumberPresensi   @map("sumber_presensi") @default(manual)
-  keterangan       String?          @db.Text
-  lokasiClockIn    String?          @map("lokasi_clock_in") @db.VarChar(255) // Lat,Long or Address
-  lokasiClockOut   String?          @map("lokasi_clock_out") @db.VarChar(255)
-  fotoClockIn      String?          @map("foto_clock_in") @db.VarChar(500) // Cloudinary URL
-  fotoClockOut     String?          @map("foto_clock_out") @db.VarChar(500)
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+  idPresensi      String          @id @default(uuid()) @map("id_presensi") @db.Uuid
+  idKaryawan      String          @map("id_karyawan") @db.Uuid
+  tanggalPresensi DateTime        @map("tanggal_presensi") @db.Date
+  waktuClockIn    DateTime?       @map("waktu_clock_in") @db.Timestamptz(3)
+  waktuClockOut   DateTime?       @map("waktu_clock_out") @db.Timestamptz(3)
+  statusKehadiran StatusKehadiran @default(hadir) @map("status_kehadiran")
+  sumberPresensi  SumberPresensi  @default(manual) @map("sumber_presensi")
+  keterangan      String?         @db.Text
+  lokasiClockIn   String?         @map("lokasi_clock_in") @db.VarChar(255)
+  lokasiClockOut  String?         @map("lokasi_clock_out") @db.VarChar(255)
+  fotoClockIn     String?         @map("foto_clock_in") @db.VarChar(500)
+  fotoClockOut    String?         @map("foto_clock_out") @db.VarChar(500)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
 
-  // Relations
   karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
 
   @@unique([idKaryawan, tanggalPresensi])
@@ -346,11 +356,10 @@ model RefJenisIzin {
   idJenisIzin String   @id @default(uuid()) @map("id_jenis_izin") @db.Uuid
   kodeIzin    String   @unique @map("kode_izin") @db.VarChar(20)
   namaIzin    String   @map("nama_izin") @db.VarChar(100)
-  potongCuti  Boolean  @map("potong_cuti") @default(true)
+  potongCuti  Boolean  @default(true) @map("potong_cuti")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  // Relations
   pengajuanIzin PengajuanIzin[]
 
   @@index([kodeIzin])
@@ -358,19 +367,18 @@ model RefJenisIzin {
 }
 
 model RefSaldoCuti {
-  idSaldo        String   @id @default(uuid()) @map("id_saldo") @db.Uuid
-  idKaryawan     String   @map("id_karyawan") @db.Uuid
-  tahun          Int
-  saldoAwal      Int      @map("saldo_awal") @default(12) // Default 12 days per year
-  saldoTerpakai  Int      @map("saldo_terpakai") @default(0)
-  saldoSisa      Int      @map("saldo_sisa") @default(12) // Calculated field
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  idSaldo       String   @id @default(uuid()) @map("id_saldo") @db.Uuid
+  idKaryawan    String   @map("id_karyawan") @db.Uuid
+  tahun         Int
+  saldoAwal     Int      @default(12) @map("saldo_awal")
+  saldoTerpakai Int      @default(0) @map("saldo_terpakai")
+  saldoSisa     Int      @default(12) @map("saldo_sisa")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  // Relations
   karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
 
-  @@unique([idKaryawan, tahun]) // One balance record per year per employee
+  @@unique([idKaryawan, tahun])
   @@index([idKaryawan])
   @@index([tahun])
   @@map("refsaldocuti")
@@ -384,22 +392,21 @@ enum StatusPersetujuan {
 }
 
 model PengajuanIzin {
-  idPengajuanIzin   String            @id @default(uuid()) @map("id_pengajuan_izin") @db.Uuid
-  idKaryawan        String            @map("id_karyawan") @db.Uuid
-  idJenisIzin       String            @map("id_jenis_izin") @db.Uuid
-  tanggalMulai      DateTime          @map("tanggal_mulai") @db.Date
-  tanggalSelesai    DateTime          @map("tanggal_selesai") @db.Date
-  jumlahHari        Int               @map("jumlah_hari")
-  keterangan        String            @db.Text
-  pathBukti         String?           @map("path_bukti") @db.VarChar(500) // Cloudinary URL
-  statusPersetujuan StatusPersetujuan @map("status_persetujuan") @default(pending)
-  idAtasan          String?           @map("id_atasan") @db.Uuid // Changed from nikAtasan
-  tanggalPersetujuan DateTime?        @map("tanggal_persetujuan") @db.Timestamptz(3)
-  catatanAtasan     String?           @map("catatan_atasan") @db.Text
-  createdAt         DateTime          @default(now()) @map("created_at")
-  updatedAt         DateTime          @updatedAt @map("updated_at")
+  idPengajuanIzin    String            @id @default(uuid()) @map("id_pengajuan_izin") @db.Uuid
+  idKaryawan         String            @map("id_karyawan") @db.Uuid
+  idJenisIzin        String            @map("id_jenis_izin") @db.Uuid
+  tanggalMulai       DateTime          @map("tanggal_mulai") @db.Date
+  tanggalSelesai     DateTime          @map("tanggal_selesai") @db.Date
+  jumlahHari         Int               @map("jumlah_hari")
+  keterangan         String            @db.Text
+  pathBukti          String?           @map("path_bukti") @db.VarChar(500)
+  statusPersetujuan  StatusPersetujuan @default(pending) @map("status_persetujuan")
+  idAtasan           String?           @map("id_atasan") @db.Uuid
+  tanggalPersetujuan DateTime?         @map("tanggal_persetujuan") @db.Timestamptz(3)
+  catatanAtasan      String?           @map("catatan_atasan") @db.Text
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
 
-  // Relations
   karyawan  RefKaryawan  @relation("PengajuanIzinKaryawan", fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
   jenisIzin RefJenisIzin @relation(fields: [idJenisIzin], references: [idJenisIzin], onDelete: Restrict)
   atasan    RefKaryawan? @relation("PengajuanIzinAtasan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
@@ -413,22 +420,21 @@ model PengajuanIzin {
 }
 
 model PengajuanLembur {
-  idLembur           String            @id @default(uuid()) @map("id_lembur") @db.Uuid
-  idKaryawan         String            @map("id_karyawan") @db.Uuid
-  tanggalLembur      DateTime          @map("tanggal_lembur") @db.Date
-  jamMulai           String            @map("jam_mulai") @db.VarChar(5) // Format: "HH:MM"
-  jamSelesai         String            @map("jam_selesai") @db.VarChar(5) // Format: "HH:MM"
-  totalJam           Decimal           @map("total_jam") @db.Decimal(4, 2) // e.g., 2.5 hours
-  keteranganPekerjaan String           @map("keterangan_pekerjaan") @db.Text
-  statusPersetujuan  StatusPersetujuan @map("status_persetujuan") @default(pending)
-  idAtasan           String?           @map("id_atasan") @db.Uuid // Changed from nikAtasan
-  tanggalPersetujuan DateTime?         @map("tanggal_persetujuan") @db.Timestamptz(3)
-  catatanAtasan      String?           @map("catatan_atasan") @db.Text
-  referensiGajiId    String?           @map("referensi_gaji_id") @db.Uuid // For payroll integration
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("updated_at")
+  idLembur            String            @id @default(uuid()) @map("id_lembur") @db.Uuid
+  idKaryawan          String            @map("id_karyawan") @db.Uuid
+  tanggalLembur       DateTime          @map("tanggal_lembur") @db.Date
+  jamMulai            String            @map("jam_mulai") @db.VarChar(5)
+  jamSelesai          String            @map("jam_selesai") @db.VarChar(5)
+  totalJam            Decimal           @map("total_jam") @db.Decimal(4, 2)
+  keteranganPekerjaan String            @map("keterangan_pekerjaan") @db.Text
+  statusPersetujuan   StatusPersetujuan @default(pending) @map("status_persetujuan")
+  idAtasan            String?           @map("id_atasan") @db.Uuid
+  tanggalPersetujuan  DateTime?         @map("tanggal_persetujuan") @db.Timestamptz(3)
+  catatanAtasan       String?           @map("catatan_atasan") @db.Text
+  referensiGajiId     String?           @map("referensi_gaji_id") @db.Uuid
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
 
-  // Relations
   karyawan RefKaryawan  @relation("PengajuanLemburKaryawan", fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
   atasan   RefKaryawan? @relation("PengajuanLemburAtasan", fields: [idAtasan], references: [idKaryawan], onDelete: SetNull)
 
@@ -437,4 +443,78 @@ model PengajuanLembur {
   @@index([tanggalLembur])
   @@index([statusPersetujuan])
   @@map("pengajuanlembur")
+}
+model RefForm {
+  idForm    String   @id @default(uuid()) @map("id_form") @db.Uuid
+  nameForm  String   @map("name_form") @db.VarChar(200)
+  deskripsi String?  @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  questions RefQuestion[]
+  answers   Answer[]
+
+  @@map("refForm")
+}
+
+model RefQuestion {
+  idQuestion   String   @id @default(uuid()) @map("id_question") @db.Uuid
+  idForm       String   @map("id_form") @db.Uuid
+  nameQuestion String   @map("name_question") @db.VarChar(500)
+  questionType String   @map("question_type") @db.VarChar(50)
+  isRequired   Boolean  @default(false) @map("is_required")
+  orderNumber  Int      @map("order_number")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  form    RefForm      @relation(fields: [idForm], references: [idForm], onDelete: Cascade)
+  options RefOption[]
+  answers Answer[]
+
+  @@index([idForm])
+  @@index([orderNumber])
+  @@map("refquestion")
+}
+
+model RefOption {
+  idOption     String   @id @default(uuid()) @map("id_option") @db.Uuid
+  idQuestion   String   @map("id_question") @db.Uuid
+  optionText   String   @map("option_text") @db.VarChar(300)
+  optionValue  String?  @map("option_value") @db.VarChar(100)
+  orderNumber  Int      @map("order_number")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  question RefQuestion @relation(fields: [idQuestion], references: [idQuestion], onDelete: Cascade)
+  answers  Answer[]
+
+  @@index([idQuestion])
+  @@map("refoption")
+}
+
+model Answer {
+  idAnswer   String   @id @default(uuid()) @map("id_answer") @db.Uuid
+  idForm     String   @map("id_form") @db.Uuid
+  idQuestion String   @map("id_question") @db.Uuid
+  idKaryawan String   @map("id_karyawan") @db.Uuid
+  idOption   String?  @map("id_option") @db.Uuid 
+  textAnswer String?  @map("text_answer") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  form     RefForm     @relation(fields: [idForm], references: [idForm], onDelete: Cascade)
+  question RefQuestion @relation(fields: [idQuestion], references: [idQuestion], onDelete: Cascade)
+  karyawan RefKaryawan @relation(fields: [idKaryawan], references: [idKaryawan], onDelete: Cascade)
+  option   RefOption?  @relation(fields: [idOption], references: [idOption], onDelete: SetNull)
+
+  @@index([idForm])
+  @@index([idQuestion])
+  @@index([idKaryawan])
+  @@index([idOption])
+  @@map("answer")
 }

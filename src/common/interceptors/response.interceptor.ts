@@ -1,4 +1,8 @@
-// src/common/interceptors/response.interceptor.ts
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NestInterceptor,
@@ -18,39 +22,33 @@ export class ResponseInterceptor<T>
     next: CallHandler,
   ): Observable<ApiResponse<T>> {
     const ctx = context.switchToHttp();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const request = ctx.getRequest();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const response = ctx.getResponse();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    const contentType = request.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+      // Untuk multipart, langsung pass tanpa transform
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => {
         // Jika data sudah dalam format response yang benar, langsung return
         if (data && typeof data === 'object' && 'statusCode' in data) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return data;
         }
 
         // Jika data memiliki meta (pagination), extract meta
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const meta = data?.meta;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const actualData = meta ? data.data : data;
 
         // Wrap response
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const wrappedResponse: ApiResponse<T> = {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           statusCode: response.statusCode,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
           message: this.getSuccessMessage(request.method),
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: actualData,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           ...(meta && { meta }),
           timestamp: new Date().toISOString(),
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           path: request.url,
         };
 

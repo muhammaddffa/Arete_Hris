@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   Injectable,
   NotFoundException,
@@ -24,22 +26,12 @@ export class DepartmentService {
   // CREATE
   // ==========================================
   async create(createDepartmentDto: CreateDepartmentDto) {
-    // Validate role exists
-    const roleExists = await this.prisma.refRole.findUnique({
-      where: { idRole: createDepartmentDto.idRoleDefault },
-      select: { idRole: true }, // Minimal select for performance
-    });
-
-    if (!roleExists) {
-      throw new BadRequestException(RESPONSE_MESSAGES.ROLE.NOT_FOUND);
-    }
-
     // Check duplicate name
     const exists = await this.prisma.refDepartemen.findFirst({
       where: {
         namaDepartemen: {
           equals: createDepartmentDto.namaDepartemen,
-          mode: 'insensitive', // Case-insensitive
+          mode: 'insensitive',
         },
       },
       select: { idDepartemen: true },
@@ -53,11 +45,9 @@ export class DepartmentService {
     return this.prisma.refDepartemen.create({
       data: createDepartmentDto,
       include: {
-        roleDefault: {
+        _count: {
           select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
+            jabatan: true,
           },
         },
       },
@@ -70,7 +60,6 @@ export class DepartmentService {
   async findAll(query: QueryDepartmentDto) {
     const {
       search,
-      idRoleDefault,
       includeRelations = false,
       page = 1,
       limit = 10,
@@ -91,25 +80,12 @@ export class DepartmentService {
           },
         },
         {
-          roleDefault: {
-            namaRole: {
-              contains: search,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
           deskripsi: {
             contains: search,
             mode: 'insensitive',
           },
         },
       ];
-    }
-
-    // Filter by role
-    if (idRoleDefault) {
-      where.idRoleDefault = idRoleDefault;
     }
 
     // Pagination
@@ -124,13 +100,6 @@ export class DepartmentService {
         orderBy: { [sortBy]: sortOrder },
         include: includeRelations
           ? {
-              roleDefault: {
-                select: {
-                  idRole: true,
-                  namaRole: true,
-                  level: true,
-                },
-              },
               _count: {
                 select: {
                   jabatan: true,
@@ -162,14 +131,6 @@ export class DepartmentService {
     const departemen = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen: id },
       include: {
-        roleDefault: {
-          select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
-            deskripsi: true,
-          },
-        },
         _count: {
           select: {
             jabatan: true,
@@ -184,21 +145,10 @@ export class DepartmentService {
 
     return departemen;
   }
+
   async update(id: string, updateDepartmentDto: UpdateDepartmentDto) {
     // Check if department exists
     await this.findOne(id);
-
-    // Validate role if being updated
-    if (updateDepartmentDto.idRoleDefault) {
-      const roleExists = await this.prisma.refRole.findUnique({
-        where: { idRole: updateDepartmentDto.idRoleDefault },
-        select: { idRole: true },
-      });
-
-      if (!roleExists) {
-        throw new BadRequestException(RESPONSE_MESSAGES.ROLE.NOT_FOUND);
-      }
-    }
 
     // Check duplicate name if being updated
     if (updateDepartmentDto.namaDepartemen) {
@@ -225,11 +175,9 @@ export class DepartmentService {
       where: { idDepartemen: id },
       data: updateDepartmentDto,
       include: {
-        roleDefault: {
+        _count: {
           select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
+            jabatan: true,
           },
         },
       },
@@ -298,11 +246,6 @@ export class DepartmentService {
       select: {
         idDepartemen: true,
         namaDepartemen: true,
-        roleDefault: {
-          select: {
-            namaRole: true,
-          },
-        },
       },
       take: limit,
       orderBy: {
@@ -312,34 +255,10 @@ export class DepartmentService {
   }
 
   async getAllStats() {
-    const [total, byRole] = await Promise.all([
-      this.prisma.refDepartemen.count(),
-      this.prisma.refDepartemen.groupBy({
-        by: ['idRoleDefault'],
-        _count: true,
-      }),
-    ]);
-
-    // Get role details
-    const roleIds = byRole.map((r) => r.idRoleDefault);
-    const roles = await this.prisma.refRole.findMany({
-      where: {
-        idRole: { in: roleIds },
-      },
-      select: {
-        idRole: true,
-        namaRole: true,
-      },
-    });
-
-    const byRoleWithNames = byRole.map((item) => ({
-      role: roles.find((r) => r.idRole === item.idRoleDefault),
-      count: item._count,
-    }));
+    const total = await this.prisma.refDepartemen.count();
 
     return {
       total,
-      byRole: byRoleWithNames,
     };
   }
 
