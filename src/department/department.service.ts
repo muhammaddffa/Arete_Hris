@@ -22,9 +22,6 @@ import { Prisma } from '@prisma/client';
 export class DepartmentService {
   constructor(private prisma: PrismaService) {}
 
-  // ==========================================
-  // CREATE
-  // ==========================================
   async create(createDepartmentDto: CreateDepartmentDto) {
     // Check duplicate name
     const exists = await this.prisma.refDepartemen.findFirst({
@@ -54,9 +51,6 @@ export class DepartmentService {
     });
   }
 
-  // ==========================================
-  // FIND ALL WITH ADVANCED SEARCH
-  // ==========================================
   async findAll(query: QueryDepartmentDto) {
     const {
       search,
@@ -124,9 +118,6 @@ export class DepartmentService {
     };
   }
 
-  // ==========================================
-  // FIND ONE
-  // ==========================================
   async findOne(id: string) {
     const departemen = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen: id },

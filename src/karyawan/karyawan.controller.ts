@@ -129,11 +129,6 @@ export class KaryawanController {
     }
   }
 
-  /**
-   * GET /karyawan
-   * Get all karyawan with filters
-   * Required permission: 'view_karyawan' or 'view_all_karyawan'
-   */
   @Get()
   // @UseGuards(JwtAuthGuard, PermissionsGuard)
   // @Permissions('view_karyawan')

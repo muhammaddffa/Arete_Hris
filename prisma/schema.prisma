@@ -356,6 +356,7 @@ model RefJenisIzin {
   idJenisIzin String   @id @default(uuid()) @map("id_jenis_izin") @db.Uuid
   kodeIzin    String   @unique @map("kode_izin") @db.VarChar(20)
   namaIzin    String   @map("nama_izin") @db.VarChar(100)
+  deskripsi   String?  @db.Text
   potongCuti  Boolean  @default(true) @map("potong_cuti")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

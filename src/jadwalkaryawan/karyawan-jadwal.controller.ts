@@ -11,7 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
-  UseGuards,
+  // UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -23,22 +23,22 @@ import {
 } from './dto/karyawan-jadwal.dto';
 import { ResponseUtil } from 'src/common/utils/response.util';
 import { RESPONSE_MESSAGES } from 'src/common/constants/response-messages.constant';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+// import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+// import { PermissionsGuard } from '../auth/guards/permissions.guard';
+// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @ApiTags('Karyawan Jadwal')
 @Controller('karyawan-jadwal')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class KaryawanJadwalController {
   constructor(private readonly karyawanJadwalService: KaryawanJadwalService) {}
 
   // CREATE - Hanya HRD
   @Post()
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jadwal_kerja')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jadwal_kerja')
   @ApiOperation({ summary: 'Assign jadwal ke karyawan (HRD only)' })
   create(@Body() createDto: CreateKaryawanJadwalDto) {
     return this.karyawanJadwalService.create(createDto);
@@ -47,8 +47,8 @@ export class KaryawanJadwalController {
   // GET ALL - HRD & Manager
   @Get()
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_karyawan')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('view_all_karyawan')
   @ApiOperation({ summary: 'Get semua karyawan jadwal (HRD & Manager)' })
   async findAll(@Query() query: QueryKaryawanJadwalDto) {
     const result = await this.karyawanJadwalService.findAll(query);
@@ -95,8 +95,8 @@ export class KaryawanJadwalController {
 
   // UPDATE - Hanya HRD
   @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jadwal_kerja')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jadwal_kerja')
   @ApiOperation({ summary: 'Update karyawan jadwal (HRD only)' })
   update(@Param('id') id: string, @Body() updateDto: UpdateKaryawanJadwalDto) {
     return this.karyawanJadwalService.update(id, updateDto);
@@ -105,8 +105,8 @@ export class KaryawanJadwalController {
   // DELETE - Hanya HRD
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jadwal_kerja')
+  // @UseGuards(PermissionsGuard)
+  // @RequirePermissions('manage_jadwal_kerja')
   @ApiOperation({ summary: 'Hapus karyawan jadwal (HRD only)' })
   remove(@Param('id') id: string) {
     return this.karyawanJadwalService.remove(id);
