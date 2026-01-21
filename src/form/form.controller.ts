@@ -66,13 +66,13 @@ export class FormController {
   }
 
   @Patch(':id')
-  @UsePipes(new ZodValidationPipe(formDto.UpdateFormSchema))
   async update(
     @Param('id') id: string,
-    @Body() updateFormDto: formDto.UpdateFormDto,
+    @Body(new ZodValidationPipe(formDto.UpdateFormSchema))
+    body: formDto.UpdateFormDto,
   ) {
     validateUuid(id);
-    const data = await this.formService.update(id, updateFormDto);
+    const data = await this.formService.update(id, body);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.FORM.UPDATED);
   }
 

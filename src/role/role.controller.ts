@@ -9,12 +9,7 @@ import { Public } from '../auth/decorators/public.decorator';
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
-  /**
-   * ⚠️ PENTING: Route spesifik harus di atas route dengan params!
-   * Urutan route matters di NestJS
-   */
-
-  // 1. Route paling spesifik dulu
+  // Route paling spesifik dulu
   @Get('level/:level')
   @Public()
   @ApiOperation({ summary: 'Get roles by level' })
@@ -26,7 +21,7 @@ export class RoleController {
     );
   }
 
-  // 2. List all roles (tanpa params)
+  // List all roles (tanpa params)
   @Get()
   @Public()
   @ApiOperation({ summary: 'Get all roles' })
@@ -35,7 +30,7 @@ export class RoleController {
     return ResponseUtil.success(data, 'Daftar role berhasil diambil');
   }
 
-  // 3. Route dengan dynamic param terakhir
+  // Route dengan dynamic param terakhir
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Get role by ID' })

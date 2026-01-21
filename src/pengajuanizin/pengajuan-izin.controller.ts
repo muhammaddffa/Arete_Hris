@@ -42,9 +42,6 @@ export class PengajuanIzinController {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  // ============================================
-  // CREATE WITH FILE UPLOAD
-  // ============================================
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Buat pengajuan izin baru dengan file upload' })

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   PipeTransform,
   Injectable,
@@ -5,32 +7,25 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as zod from 'zod';
+import { ZodError } from 'zod';
 
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: zod.ZodSchema) {}
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  transform(value: unknown, _metadata: ArgumentMetadata) {
+  transform(value: any, metadata: ArgumentMetadata) {
     try {
       return this.schema.parse(value);
     } catch (error) {
-      if (error instanceof zod.ZodError) {
-        throw new BadRequestException({
-          message: 'Validation failed',
-          statusCode: 400,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-          errors: error.issues.map((e) => ({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-            field: e.path.join('.'),
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            message: e.message,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            code: e.code,
-          })),
-        });
+      // TAMBAHKAN INI UNTUK DEBUGGING
+      if (error instanceof ZodError) {
+        console.log('--- ZOD VALIDATION ERROR ---');
+        console.log(JSON.stringify(error, null, 2));
+        console.log('--- PAYLOAD YANG DITERIMA ---');
+        console.log(value);
       }
-      throw error;
+      throw new BadRequestException('Validation failed');
     }
   }
 }
