@@ -5,9 +5,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RoleService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Get all roles untuk dropdown
-   */
   async findAll() {
     return this.prisma.refRole.findMany({
       select: {
@@ -20,9 +17,6 @@ export class RoleService {
     });
   }
 
-  /**
-   * Get role by ID with permissions
-   */
   async findOne(id: number) {
     return this.prisma.refRole.findUnique({
       where: { idRole: id },
@@ -36,9 +30,6 @@ export class RoleService {
     });
   }
 
-  /**
-   * Get roles by level
-   */
   async findByLevel(level: number) {
     return this.prisma.refRole.findMany({
       where: { level },

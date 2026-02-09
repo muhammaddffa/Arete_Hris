@@ -1,97 +1,54 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { z } from 'zod';
-import { ApiProperty } from '@nestjs/swagger';
 
-// Schema untuk Create Question
-const QUESTION_TYPES = [
+export const QUESTION_TYPES = [
   'text',
-  'single_choice',
-  'multiple_choice',
-  'rating',
   'textarea',
+  'number',
+  'email',
+  'date',
+  'radio',
+  'checkbox',
+  'select',
+  'rating',
 ] as const;
+
+// Schema Opsi
+const OptionSchema = z.object({
+  optionText: z.string().min(1, 'Teks opsi harus diisi').max(300),
+  optionValue: z.string().max(100).optional(),
+  orderNumber: z.number().int().positive(),
+});
 
 export const CreateQuestionSchema = z.object({
   idForm: z.string().uuid('ID Form tidak valid'),
-  nameQuestion: z
-    .string()
-    .min(1, 'Pertanyaan harus diisi')
-    .max(500, 'Pertanyaan maksimal 500 karakter'),
-
-  questionType: z.enum(QUESTION_TYPES, {
-    message: 'Tipe pertanyaan tidak valid',
-  }),
-
+  nameQuestion: z.string().min(1).max(500),
+  questionType: z.enum(QUESTION_TYPES),
   isRequired: z.boolean().optional().default(false),
-  orderNumber: z.number().int().positive('Order number harus positif'),
-
-  options: z
-    .array(
-      z.object({
-        optionText: z.string().min(1, 'Teks opsi harus diisi').max(300),
-        optionValue: z.string().max(100).optional(),
-        orderNumber: z.number().int().positive(),
-      }),
-    )
-    .optional(),
+  orderNumber: z.number().int().positive(),
+  options: z.array(OptionSchema).optional(),
 });
 
 export type CreateQuestionDto = z.infer<typeof CreateQuestionSchema>;
 
-// Schema untuk Update Question
-export const UpdateQuestionSchema = z.object({
-  nameQuestion: z
-    .string()
-    .min(1, 'Pertanyaan harus diisi')
-    .max(500, 'Pertanyaan maksimal 500 karakter')
-    .optional(),
-  questionType: z
-    .enum(['text', 'single_choice', 'multiple_choice', 'rating', 'textarea'])
-    .optional(),
-  isRequired: z.boolean().optional(),
-  orderNumber: z
-    .number()
-    .int()
-    .positive('Order number harus positif')
-    .optional(),
-});
-
-export type UpdateQuestionDto = z.infer<typeof UpdateQuestionSchema>;
-
-// Schema untuk Bulk Create Questions
+// --- BULK CREATE ---
 export const BulkCreateQuestionsSchema = z.object({
   idForm: z.string().uuid('ID Form tidak valid'),
-  questions: z
-    .array(
-      z.object({
-        nameQuestion: z.string().min(1).max(500),
-        questionType: z.enum([
-          'text',
-          'single_choice',
-          'multiple_choice',
-          'rating',
-          'textarea',
-        ]),
-        isRequired: z.boolean().optional().default(false),
-        orderNumber: z.number().int().positive(),
-        options: z
-          .array(
-            z.object({
-              optionText: z.string().min(1).max(300),
-              optionValue: z.string().max(100).optional(),
-              orderNumber: z.number().int().positive(),
-            }),
-          )
-          .optional(),
-      }),
-    )
-    .min(1, 'Minimal 1 pertanyaan harus diisi'),
+  questions: z.array(CreateQuestionSchema.omit({ idForm: true })).min(1),
 });
 
+// PASTIKAN BARIS INI ADA (Ini yang menyebabkan error ts 2724 tadi)
 export type BulkCreateQuestionsDto = z.infer<typeof BulkCreateQuestionsSchema>;
 
-// Schema untuk Reorder Questions
+// --- UPDATE ---
+export const UpdateQuestionSchema = CreateQuestionSchema.partial().omit({
+  idForm: true,
+});
+export type UpdateQuestionDto = z.infer<typeof UpdateQuestionSchema>;
+
+// --- REORDER ---
 export const ReorderQuestionsSchema = z.object({
+  // Gunakan nama 'questions' agar sesuai dengan kode logic Service Anda saat ini
   questions: z
     .array(
       z.object({

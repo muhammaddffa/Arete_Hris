@@ -46,7 +46,6 @@ async function main() {
   }
   console.log('═══════════════════════════════════════════════════════════\n');
 
-  // ===== SEED DEPARTMENTS & JABATAN =====
   console.log('🏢 STEP 4: Seeding Departments & Jabatan...\n');
   await seedLogisticsDepartments();
   console.log('═══════════════════════════════════════════════════════════\n');
