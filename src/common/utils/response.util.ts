@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ApiResponse } from '../interfaces/response.interface';
 import { PaginationMeta } from './pagination.utils';
 

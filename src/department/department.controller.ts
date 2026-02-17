@@ -10,7 +10,7 @@ import {
   HttpStatus,
   HttpCode,
   ParseUUIDPipe,
-  // UseGuards,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,70 +32,47 @@ import {
 } from './dto/department.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-// import { Permissions } from 'src/auth/decorators/permissions.decorator';
-// import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
-// import { Roles } from 'src/auth/decorators/roles.decorator';
-// import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Public } from 'src/auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Departemen')
 @Controller('department')
-// @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) {}
 
   @Post()
-  @Public()
-  // @Roles(2)
+  @RequirePermission('manage_department', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create new department' })
+  @ApiOperation({ summary: 'Buat departemen baru' })
   @ApiResponse({
     status: 201,
-    description: 'Department berhasil dibuat',
+    description: 'Departemen berhasil dibuat',
     type: DepartmentResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 409, description: 'Department name already exists' })
+  @ApiResponse({ status: 409, description: 'Nama departemen sudah ada' })
   async create(@Body() createDepartmentDto: CreateDepartmentDto) {
     const data = await this.departmentService.create(createDepartmentDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.DEPARTMENT.CREATED);
   }
 
   @Get()
-  @Public()
-  // @Roles(2)
-  @ApiOperation({
-    summary: 'Get all departments with pagination, search, and filters',
-    description: 'Search by name, filter by role, with pagination support',
-  })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    type: String,
-    description: 'Search by nama departemen',
-  })
-  @ApiQuery({
-    name: 'idRoleDefault',
-    required: false,
-    type: Number,
-    description: 'Filter by role ID',
-  })
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua departemen' })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'includeRelations', required: false, type: Boolean })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: ['namaDepartemen', 'idRoleDefault', 'createdAt'],
+    enum: ['namaDepartemen', 'createdAt'],
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
-  @ApiResponse({
-    status: 200,
-    description: 'List of departments with pagination',
-    type: PaginatedDepartmentResponseDto,
-  })
+  @ApiResponse({ status: 200, type: PaginatedDepartmentResponseDto })
   async findAll(@Query() query: QueryDepartmentDto) {
     const result = await this.departmentService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -106,17 +83,10 @@ export class DepartmentController {
   }
 
   @Get('autocomplete')
-  @ApiOperation({
-    summary: 'Autocomplete department name',
-    description: 'Get suggestions for department search (min 2 chars)',
-  })
-  @ApiQuery({
-    name: 'q',
-    required: true,
-    description: 'Search query (min 2 chars)',
-  })
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Autocomplete nama departemen (min 2 karakter)' })
+  @ApiQuery({ name: 'q', required: true })
   @ApiQuery({ name: 'limit', required: false, type: Number, default: 10 })
-  @ApiResponse({ status: 200, description: 'Autocomplete suggestions' })
   async autocomplete(
     @Query('q') query: string,
     @Query('limit') limit?: number,
@@ -126,103 +96,18 @@ export class DepartmentController {
   }
 
   @Get('stats/summary')
-  @ApiOperation({ summary: 'Get all departments statistics summary' })
-  @ApiResponse({
-    status: 200,
-    description: 'Statistics summary',
-    schema: {
-      type: 'object',
-      properties: {
-        total: { type: 'number', example: 10 },
-        byRole: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              role: {
-                type: 'object',
-                properties: {
-                  idRole: { type: 'number' },
-                  namaRole: { type: 'string' },
-                },
-              },
-              count: { type: 'number' },
-            },
-          },
-        },
-      },
-    },
-  })
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik semua departemen' })
   async getAllStats() {
     const data = await this.departmentService.getAllStats();
     return ResponseUtil.success(data, 'Statistik departemen berhasil diambil');
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get department by ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'Department ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Department found',
-    type: DepartmentResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Department not found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.departmentService.findOne(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.FOUND);
-  }
-
-  // ==========================================
-  // GET STATS
-  // ==========================================
-  @Get(':id/stats')
-  @ApiOperation({ summary: 'Get department statistics' })
-  @ApiParam({
-    name: 'id',
-    description: 'Department ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Department statistics',
-    type: DepartmentWithStatsDto,
-  })
-  @ApiResponse({ status: 404, description: 'Department not found' })
-  async getDepartmentStats(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.departmentService.getDepartmentStats(id);
-    return ResponseUtil.success(data, 'Statistik departemen berhasil diambil');
-  }
-
-  // ==========================================
-  // NEW: CHECK DUPLICATE NAME
-  // ==========================================
   @Get('check/duplicate')
-  @ApiOperation({ summary: 'Check if department name already exists' })
-  @ApiQuery({
-    name: 'name',
-    required: true,
-    description: 'Department name to check',
-  })
-  @ApiQuery({
-    name: 'excludeId',
-    required: false,
-    description: 'Exclude this ID from check (for updates)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Duplicate check result',
-    schema: {
-      type: 'object',
-      properties: {
-        exists: { type: 'boolean' },
-        name: { type: 'string' },
-      },
-    },
-  })
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Cek duplikasi nama departemen' })
+  @ApiQuery({ name: 'name', required: true })
+  @ApiQuery({ name: 'excludeId', required: false })
   async checkDuplicate(
     @Query('name') name: string,
     @Query('excludeId') excludeId?: string,
@@ -234,24 +119,34 @@ export class DepartmentController {
     );
   }
 
-  // ==========================================
-  // UPDATE
-  // ==========================================
+  @Get(':id')
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get departemen by ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: DepartmentResponseDto })
+  @ApiResponse({ status: 404, description: 'Departemen tidak ditemukan' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.departmentService.findOne(id);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.FOUND);
+  }
+
+  @Get(':id/stats')
+  @RequirePermission('manage_department', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik departemen' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: DepartmentWithStatsDto })
+  async getDepartmentStats(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.departmentService.getDepartmentStats(id);
+    return ResponseUtil.success(data, 'Statistik departemen berhasil diambil');
+  }
+
   @Patch(':id')
-  @ApiOperation({ summary: 'Update department' })
-  @ApiParam({
-    name: 'id',
-    description: 'Department ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Department berhasil diupdate',
-    type: DepartmentResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Department not found' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 409, description: 'Department name already exists' })
+  @RequirePermission('manage_department', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Update departemen' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: DepartmentResponseDto })
+  @ApiResponse({ status: 404, description: 'Departemen tidak ditemukan' })
+  @ApiResponse({ status: 409, description: 'Nama departemen sudah ada' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDepartmentDto: UpdateDepartmentDto,
@@ -260,60 +155,29 @@ export class DepartmentController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.UPDATED);
   }
 
-  // ==========================================
-  // DELETE
-  // ==========================================
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete department' })
-  @ApiParam({
-    name: 'id',
-    description: 'Department ID (UUID)',
-    format: 'uuid',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Department berhasil dihapus',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Department not found',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Cannot delete department with existing jabatan',
-  })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.departmentService.remove(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.DELETED);
-  }
-
-  // ==========================================
-  // NEW: BULK DELETE
-  // ==========================================
   @Delete('bulk/delete')
+  @RequirePermission('manage_department', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Bulk delete departments' })
-  @ApiResponse({
-    status: 200,
-    description: 'Departments deleted successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        deleted: { type: 'number' },
-        ids: { type: 'array', items: { type: 'string' } },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Some departments cannot be deleted',
-  })
+  @ApiOperation({ summary: 'Bulk delete departemen' })
   async bulkDelete(@Body() dto: BulkDeleteDepartmentDto) {
     const result = await this.departmentService.bulkDelete(dto);
     return ResponseUtil.success(
       result,
       `${result.deleted} departemen berhasil dihapus`,
     );
+  }
+
+  @Delete(':id')
+  @RequirePermission('manage_department', PERMISSION.DELETE)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete departemen' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({
+    status: 400,
+    description: 'Tidak bisa hapus departemen yang masih punya jabatan',
+  })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.departmentService.remove(id);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.DEPARTMENT.DELETED);
   }
 }

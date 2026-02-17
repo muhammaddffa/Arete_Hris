@@ -1,11 +1,11 @@
-/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { BlacklistService } from './blacklist.service';
 import { BlacklistController } from './blacklist.controller';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [BlacklistController],
   providers: [BlacklistService],
   exports: [BlacklistService],

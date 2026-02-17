@@ -1,9 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   Controller,
   Get,
@@ -16,22 +10,27 @@ import {
   UsePipes,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FormService } from './form.service';
 import * as formDto from './dto/form.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 import { ResponseUtil } from '../common/utils/response.util';
 import { validateUuid } from './form.validation';
-import { RESPONSE_MESSAGES } from 'src/common/constants/response-messages.constant';
-import { ApiTags } from '@nestjs/swagger';
+import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
 
-@Controller('forms')
 @ApiTags('Form')
-// @UseGuards(JwtAuthGuard)
+@Controller('forms')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class FormController {
   constructor(private readonly formService: FormService) {}
 
   @Post()
+  @RequirePermission('manage_form', PERMISSION.CREATE)
   @UsePipes(new ZodValidationPipe(formDto.CreateFormSchema))
   async create(@Body() createFormDto: formDto.CreateFormDto) {
     const data = await this.formService.create(createFormDto);
@@ -39,6 +38,7 @@ export class FormController {
   }
 
   @Get()
+  @RequirePermission('manage_form', PERMISSION.READ)
   async findAll(
     @Query(new ZodValidationPipe(formDto.FilterFormSchema))
     query: formDto.FilterFormDto,
@@ -51,21 +51,24 @@ export class FormController {
     );
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    validateUuid(id);
-    const data = await this.formService.findOne(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.FORM.FOUND);
-  }
-
   @Get(':id/statistics')
+  @RequirePermission('manage_form', PERMISSION.READ)
   async getStatistics(@Param('id') id: string) {
     validateUuid(id);
     const data = await this.formService.getStatistics(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.FORM.STATISTICS);
   }
 
+  @Get(':id')
+  @RequirePermission('manage_form', PERMISSION.READ)
+  async findOne(@Param('id') id: string) {
+    validateUuid(id);
+    const data = await this.formService.findOne(id);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.FORM.FOUND);
+  }
+
   @Patch(':id')
+  @RequirePermission('manage_form', PERMISSION.UPDATE)
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(formDto.UpdateFormSchema))
@@ -77,6 +80,7 @@ export class FormController {
   }
 
   @Delete(':id')
+  @RequirePermission('manage_form', PERMISSION.DELETE)
   async remove(@Param('id') id: string) {
     validateUuid(id);
     const data = await this.formService.remove(id);

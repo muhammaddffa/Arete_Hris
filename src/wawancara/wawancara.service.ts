@@ -1,8 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
-/* eslint-disable @typescript-eslint/require-await */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
@@ -64,7 +61,7 @@ export class WawancaraService {
       createWawancaraDto.tanggalWawancara,
     );
 
-    const existingSchedule = await this.prisma.refWawancara.findFirst({
+    const existingSchedule = await this.prisma.wawancara.findFirst({
       where: {
         idPewawancara: createWawancaraDto.idPewawancara,
         tanggalWawancara,
@@ -82,7 +79,7 @@ export class WawancaraService {
     }
 
     // Create wawancara
-    return this.prisma.refWawancara.create({
+    return this.prisma.wawancara.create({
       data: {
         idPewawancara: createWawancaraDto.idPewawancara,
         idPeserta: createWawancaraDto.idPeserta,
@@ -186,7 +183,7 @@ export class WawancaraService {
 
     // Execute query
     const [data, total] = await this.prisma.$transaction([
-      this.prisma.refWawancara.findMany({
+      this.prisma.wawancara.findMany({
         where,
         skip,
         take: validLimit,
@@ -224,7 +221,7 @@ export class WawancaraService {
             }
           : undefined,
       }),
-      this.prisma.refWawancara.count({ where }),
+      this.prisma.wawancara.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / validLimit);
@@ -243,7 +240,7 @@ export class WawancaraService {
   }
 
   async findOne(id: string) {
-    const wawancara = await this.prisma.refWawancara.findUnique({
+    const wawancara = await this.prisma.wawancara.findUnique({
       where: { idWawancara: id },
       include: {
         pewawancara: {
@@ -293,7 +290,7 @@ export class WawancaraService {
       where.status = status;
     }
 
-    return this.prisma.refWawancara.findMany({
+    return this.prisma.wawancara.findMany({
       where,
       orderBy: [{ tanggalWawancara: 'desc' }, { jamWawancara: 'desc' }],
       include: {
@@ -311,7 +308,7 @@ export class WawancaraService {
   }
 
   async getByPeserta(idPeserta: string) {
-    return this.prisma.refWawancara.findMany({
+    return this.prisma.wawancara.findMany({
       where: { idPeserta },
       orderBy: [{ tanggalWawancara: 'desc' }, { jamWawancara: 'desc' }],
       include: {
@@ -336,7 +333,7 @@ export class WawancaraService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return this.prisma.refWawancara.findMany({
+    return this.prisma.wawancara.findMany({
       where: {
         tanggalWawancara: { gte: today },
         status: {
@@ -374,7 +371,7 @@ export class WawancaraService {
       );
     }
 
-    return this.prisma.refWawancara.update({
+    return this.prisma.wawancara.update({
       where: { idWawancara: id },
       data: updateData,
       include: {
@@ -407,7 +404,7 @@ export class WawancaraService {
       throw new BadRequestException('Wawancara sudah dibatalkan');
     }
 
-    return this.prisma.refWawancara.update({
+    return this.prisma.wawancara.update({
       where: { idWawancara: id },
       data: {
         hasil: completeDto.hasil,
@@ -438,7 +435,7 @@ export class WawancaraService {
       throw new BadRequestException('Wawancara sudah dibatalkan');
     }
 
-    return this.prisma.refWawancara.update({
+    return this.prisma.wawancara.update({
       where: { idWawancara: id },
       data: {
         status: StatusWawancara.CANCELLED,
@@ -477,7 +474,7 @@ export class WawancaraService {
 
     // Check conflict
     const tanggalWawancara = this.parseDate(tanggalBaru);
-    const existingSchedule = await this.prisma.refWawancara.findFirst({
+    const existingSchedule = await this.prisma.wawancara.findFirst({
       where: {
         idPewawancara: wawancara.idPewawancara,
         tanggalWawancara,
@@ -495,7 +492,7 @@ export class WawancaraService {
       );
     }
 
-    return this.prisma.refWawancara.update({
+    return this.prisma.wawancara.update({
       where: { idWawancara: id },
       data: {
         tanggalWawancara,
@@ -515,7 +512,7 @@ export class WawancaraService {
   async remove(id: string) {
     await this.findOne(id);
 
-    return this.prisma.refWawancara.delete({
+    return this.prisma.wawancara.delete({
       where: { idWawancara: id },
       select: {
         idWawancara: true,
@@ -528,12 +525,12 @@ export class WawancaraService {
 
   async getStats() {
     const [total, byStatus, byJenis] = await Promise.all([
-      this.prisma.refWawancara.count(),
-      this.prisma.refWawancara.groupBy({
+      this.prisma.wawancara.count(),
+      this.prisma.wawancara.groupBy({
         by: ['status'],
         _count: true,
       }),
-      this.prisma.refWawancara.groupBy({
+      this.prisma.wawancara.groupBy({
         by: ['jenisWawancara'],
         _count: true,
       }),

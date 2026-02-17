@@ -33,20 +33,20 @@ import { createResponse } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Presensi')
 @Controller('presensi')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PresensiController {
   constructor(private readonly presensiService: PresensiService) {}
 
   @Post()
+  @RequirePermission('manage_presensi', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_presensi')
   @ApiOperation({ summary: 'Buat presensi manual (HRD only)' })
   @ApiResponse({ status: 201, description: 'Presensi berhasil dibuat' })
   async create(@Body() createDto: CreatePresensiDto) {
@@ -59,9 +59,9 @@ export class PresensiController {
   }
 
   @Post('clock-in')
+  @RequirePermission('view_presensi', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Clock in karyawan' })
-  @ApiResponse({ status: 201, description: 'Clock in berhasil' })
   async clockIn(@Body() clockInDto: ClockInDto, @CurrentUser() user: any) {
     if (clockInDto.idKaryawan !== user.idKaryawan) {
       return createResponse(
@@ -69,7 +69,6 @@ export class PresensiController {
         'Anda hanya bisa clock in untuk diri sendiri',
       );
     }
-
     const data = await this.presensiService.clockIn(clockInDto);
     return createResponse(
       HttpStatus.CREATED,
@@ -79,10 +78,10 @@ export class PresensiController {
   }
 
   @Post('clock-out/:idKaryawan')
+  @RequirePermission('view_presensi', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Clock out karyawan' })
   @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
-  @ApiResponse({ status: 200, description: 'Clock out berhasil' })
   async clockOut(
     @Param('idKaryawan') idKaryawan: string,
     @Body() clockOutDto: ClockOutDto,
@@ -94,7 +93,6 @@ export class PresensiController {
         'Anda hanya bisa clock out untuk diri sendiri',
       );
     }
-
     const data = await this.presensiService.clockOut(idKaryawan, clockOutDto);
     return createResponse(
       HttpStatus.OK,
@@ -104,17 +102,15 @@ export class PresensiController {
   }
 
   @Get()
+  @RequirePermission('manage_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_presensi') // ✅ Hanya HRD & Manager
-  @ApiOperation({ summary: 'Get semua presensi dengan filter (HRD & Manager)' })
+  @ApiOperation({ summary: 'Get semua presensi (HRD & Manager)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'startDate', required: false, example: '2025-01-01' })
   @ApiQuery({ name: 'endDate', required: false, example: '2025-01-31' })
   @ApiQuery({ name: 'idKaryawan', required: false })
   @ApiQuery({ name: 'statusKehadiran', required: false, enum: StatusKehadiran })
-  @ApiResponse({ status: 200, description: 'Daftar presensi' })
   async findAll(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
@@ -136,35 +132,12 @@ export class PresensiController {
     );
   }
 
-  @Get('my-presensi')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_presensi')
-  @ApiOperation({ summary: 'Get presensi sendiri' })
-  @ApiQuery({ name: 'month', required: false, example: 1 })
-  @ApiQuery({ name: 'year', required: false, example: 2025 })
-  @ApiResponse({ status: 200, description: 'Presensi Anda' })
-  async getMyPresensi(
-    @CurrentUser() user: any,
-    @Query('month') month?: string,
-    @Query('year') year?: string,
-  ) {
-    const data = await this.presensiService.findByKaryawan(
-      user.idKaryawan,
-      month ? parseInt(month) : undefined,
-      year ? parseInt(year) : undefined,
-    );
-    return createResponse(HttpStatus.OK, 'Presensi Anda', data);
-  }
-
   @Get('my-presensi/summary')
+  @RequirePermission('view_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_presensi')
   @ApiOperation({ summary: 'Get summary presensi sendiri' })
   @ApiQuery({ name: 'month', required: true, example: 1 })
   @ApiQuery({ name: 'year', required: true, example: 2025 })
-  @ApiResponse({ status: 200, description: 'Summary presensi Anda' })
   async getMySummary(
     @CurrentUser() user: any,
     @Query('month') month: string,
@@ -182,39 +155,32 @@ export class PresensiController {
     );
   }
 
-  // GET BY KARYAWAN (HRD & Manager)
-  @Get('karyawan/:idKaryawan')
+  @Get('my-presensi')
+  @RequirePermission('view_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_presensi') // ✅ Hanya HRD & Manager
-  @ApiOperation({ summary: 'Get presensi by karyawan (HRD & Manager)' })
-  @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
+  @ApiOperation({ summary: 'Get presensi sendiri' })
   @ApiQuery({ name: 'month', required: false, example: 1 })
   @ApiQuery({ name: 'year', required: false, example: 2025 })
-  @ApiResponse({ status: 200, description: 'Daftar presensi karyawan' })
-  async findByKaryawan(
-    @Param('idKaryawan') idKaryawan: string,
+  async getMyPresensi(
+    @CurrentUser() user: any,
     @Query('month') month?: string,
     @Query('year') year?: string,
   ) {
     const data = await this.presensiService.findByKaryawan(
-      idKaryawan,
+      user.idKaryawan,
       month ? parseInt(month) : undefined,
       year ? parseInt(year) : undefined,
     );
-    return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.PRESENSI.LIST, data);
+    return createResponse(HttpStatus.OK, 'Presensi Anda', data);
   }
 
-  // GET SUMMARY BY KARYAWAN (HRD & Manager)
   @Get('karyawan/:idKaryawan/summary')
+  @RequirePermission('manage_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_presensi') // ✅ Hanya HRD & Manager
   @ApiOperation({ summary: 'Get summary presensi karyawan (HRD & Manager)' })
   @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
   @ApiQuery({ name: 'month', required: true, example: 1 })
   @ApiQuery({ name: 'year', required: true, example: 2025 })
-  @ApiResponse({ status: 200, description: 'Summary presensi karyawan' })
   async getSummary(
     @Param('idKaryawan') idKaryawan: string,
     @Query('month') month: string,
@@ -232,14 +198,31 @@ export class PresensiController {
     );
   }
 
-  // GET DETAIL BY ID (HRD & Manager)
-  @Get(':id')
+  @Get('karyawan/:idKaryawan')
+  @RequirePermission('manage_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_presensi') // ✅ Hanya HRD & Manager
+  @ApiOperation({ summary: 'Get presensi by karyawan (HRD & Manager)' })
+  @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
+  @ApiQuery({ name: 'month', required: false, example: 1 })
+  @ApiQuery({ name: 'year', required: false, example: 2025 })
+  async findByKaryawan(
+    @Param('idKaryawan') idKaryawan: string,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
+  ) {
+    const data = await this.presensiService.findByKaryawan(
+      idKaryawan,
+      month ? parseInt(month) : undefined,
+      year ? parseInt(year) : undefined,
+    );
+    return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.PRESENSI.LIST, data);
+  }
+
+  @Get(':id')
+  @RequirePermission('manage_presensi', PERMISSION.READ)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get presensi by ID (HRD & Manager)' })
   @ApiParam({ name: 'id', description: 'ID Presensi (UUID)' })
-  @ApiResponse({ status: 200, description: 'Detail presensi' })
   async findOne(@Param('id') id: string) {
     const data = await this.presensiService.findOne(id);
     return createResponse(
@@ -249,14 +232,11 @@ export class PresensiController {
     );
   }
 
-  // UPDATE (HRD Only)
   @Patch(':id')
+  @RequirePermission('manage_presensi', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_presensi') // ✅ Hanya HRD
   @ApiOperation({ summary: 'Update presensi (HRD only)' })
   @ApiParam({ name: 'id', description: 'ID Presensi (UUID)' })
-  @ApiResponse({ status: 200, description: 'Presensi berhasil diupdate' })
   async update(@Param('id') id: string, @Body() updateDto: UpdatePresensiDto) {
     const data = await this.presensiService.update(id, updateDto);
     return createResponse(
@@ -266,14 +246,11 @@ export class PresensiController {
     );
   }
 
-  // DELETE (HRD Only)
   @Delete(':id')
+  @RequirePermission('manage_presensi', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_presensi') // ✅ Hanya HRD
   @ApiOperation({ summary: 'Hapus presensi (HRD only)' })
   @ApiParam({ name: 'id', description: 'ID Presensi (UUID)' })
-  @ApiResponse({ status: 200, description: 'Presensi berhasil dihapus' })
   async remove(@Param('id') id: string) {
     await this.presensiService.remove(id);
     return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.PRESENSI.DELETED);

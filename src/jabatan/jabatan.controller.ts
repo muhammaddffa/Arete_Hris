@@ -21,34 +21,30 @@ import {
 } from './dto/jabatan.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Public } from 'src/auth/decorators/public.decorator';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Jabatan')
 @Controller('jabatan')
-// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class JabatanController {
   constructor(private readonly jabatanService: JabatanService) {}
 
-  // CREATE - Hanya HRD & Superadmin
   @Post()
-  @Public()
+  @RequirePermission('manage_jabatan', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_jabatan')
-  @ApiOperation({ summary: 'Create jabatan (HRD only)' })
+  @ApiOperation({ summary: 'Buat jabatan baru' })
   async create(@Body() createJabatanDto: CreateJabatanDto) {
     const data = await this.jabatanService.create(createJabatanDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.JABATAN.CREATED);
   }
 
-  // GET ALL - Semua yang login bisa lihat
   @Get()
-  @Public()
-  @ApiOperation({ summary: 'Get all jabatan' })
+  @RequirePermission('manage_jabatan', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua jabatan' })
   async findAll(@Query() query: QueryJabatanDto) {
     const result = await this.jabatanService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -58,8 +54,8 @@ export class JabatanController {
     );
   }
 
-  // GET BY DEPARTEMEN - Semua yang login bisa lihat
   @Get('departemen/:idDepartemen')
+  @RequirePermission('manage_jabatan', PERMISSION.READ)
   @ApiOperation({ summary: 'Get jabatan by departemen' })
   async getByDepartemen(
     @Param('idDepartemen', ParseUUIDPipe) idDepartemen: string,
@@ -68,29 +64,25 @@ export class JabatanController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.LIST);
   }
 
-  // GET STATS - Hanya HRD & Manager
   @Get(':id/stats')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_all_karyawan')
-  @ApiOperation({ summary: 'Get jabatan statistics (HRD & Manager)' })
+  @RequirePermission('manage_jabatan', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik jabatan' })
   async getJabatanStats(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.getJabatanStats(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.FOUND);
   }
 
-  // GET ONE - Semua yang login bisa lihat
   @Get(':id')
+  @RequirePermission('manage_jabatan', PERMISSION.READ)
   @ApiOperation({ summary: 'Get jabatan by ID' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.findOne(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.FOUND);
   }
 
-  // UPDATE - Hanya HRD & Superadmin
   @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('manage_jabatan')
-  @ApiOperation({ summary: 'Update jabatan (HRD only)' })
+  @RequirePermission('manage_jabatan', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Update jabatan' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateJabatanDto: UpdateJabatanDto,
@@ -99,13 +91,10 @@ export class JabatanController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.UPDATED);
   }
 
-  // DELETE - Hanya HRD & Superadmin
   @Delete(':id')
-  @Public()
+  @RequirePermission('manage_jabatan', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_jabatan')
-  @ApiOperation({ summary: 'Delete jabatan (HRD only)' })
+  @ApiOperation({ summary: 'Delete jabatan' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.jabatanService.remove(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.JABATAN.DELETED);

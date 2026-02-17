@@ -9,7 +9,7 @@ import {
   HttpStatus,
   HttpCode,
   ParseUUIDPipe,
-  //   UseGuards,
+  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -28,43 +28,41 @@ import {
 } from './dto/question.dto';
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// import { PermissionsGuard } from '../auth/guards/permissions.guard';
-// import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @ApiTags('Question')
 @Controller('questions')
-// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
 
   @Post()
+  @RequirePermission('manage_form', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('manage_form')
   @UsePipes(new ZodValidationPipe(CreateQuestionSchema))
-  @ApiOperation({ summary: 'Create question (HRD & Admin only)' })
+  @ApiOperation({ summary: 'Buat question baru' })
   async create(@Body() createQuestionDto: CreateQuestionDto) {
     const data = await this.questionService.create(createQuestionDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.QUESTION.CREATED);
   }
 
   @Post('bulk')
+  @RequirePermission('manage_form', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('manage_form')
   @UsePipes(new ZodValidationPipe(BulkCreateQuestionsSchema))
-  @ApiOperation({ summary: 'Bulk create questions (HRD & Admin only)' })
+  @ApiOperation({ summary: 'Bulk create questions' })
   async bulkCreate(@Body() bulkCreateDto: BulkCreateQuestionsDto) {
     const data = await this.questionService.bulkCreate(bulkCreateDto);
     return ResponseUtil.created(data, RESPONSE_MESSAGES.QUESTION.BULK_CREATED);
   }
 
   @Get('form/:idForm')
-  @Public()
+  @RequirePermission('manage_form', PERMISSION.READ)
   @ApiOperation({ summary: 'Get questions by form ID' })
   async findByFormId(@Param('idForm', ParseUUIDPipe) idForm: string) {
     const data = await this.questionService.findByFormId(idForm);
@@ -72,40 +70,25 @@ export class QuestionController {
   }
 
   @Get(':id/statistics')
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('view_form_statistics')
-  @ApiOperation({ summary: 'Get question statistics (HRD & Manager)' })
+  @RequirePermission('manage_form', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik question' })
   async getStatistics(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.questionService.getStatistics(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.STATISTICS);
   }
 
   @Get(':id')
-  @Public()
+  @RequirePermission('manage_form', PERMISSION.READ)
   @ApiOperation({ summary: 'Get question by ID' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.questionService.findOne(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.FOUND);
   }
 
-  @Patch(':id')
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('manage_form')
-  @UsePipes(new ZodValidationPipe(UpdateQuestionSchema))
-  @ApiOperation({ summary: 'Update question (HRD & Admin only)' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateQuestionDto: UpdateQuestionDto,
-  ) {
-    const data = await this.questionService.update(id, updateQuestionDto);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.UPDATED);
-  }
-
   @Patch('form/:idForm/reorder')
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('manage_form')
+  @RequirePermission('manage_form', PERMISSION.UPDATE)
   @UsePipes(new ZodValidationPipe(ReorderQuestionsSchema))
-  @ApiOperation({ summary: 'Reorder questions (HRD & Admin only)' })
+  @ApiOperation({ summary: 'Reorder questions' })
   async reorder(
     @Param('idForm', ParseUUIDPipe) idForm: string,
     @Body() reorderDto: ReorderQuestionsDto,
@@ -114,11 +97,22 @@ export class QuestionController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.REORDERED);
   }
 
+  @Patch(':id')
+  @RequirePermission('manage_form', PERMISSION.UPDATE)
+  @UsePipes(new ZodValidationPipe(UpdateQuestionSchema))
+  @ApiOperation({ summary: 'Update question' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateQuestionDto: UpdateQuestionDto,
+  ) {
+    const data = await this.questionService.update(id, updateQuestionDto);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.UPDATED);
+  }
+
   @Delete(':id')
+  @RequirePermission('manage_form', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('manage_form')
-  @ApiOperation({ summary: 'Delete question (HRD & Admin only)' })
+  @ApiOperation({ summary: 'Delete question' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.questionService.remove(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.QUESTION.DELETED);

@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   Injectable,
   NotFoundException,
@@ -23,7 +19,6 @@ export class DepartmentService {
   constructor(private prisma: PrismaService) {}
 
   async create(createDepartmentDto: CreateDepartmentDto) {
-    // Check duplicate name
     const exists = await this.prisma.refDepartemen.findFirst({
       where: {
         namaDepartemen: {
@@ -38,14 +33,11 @@ export class DepartmentService {
       throw new ConflictException(RESPONSE_MESSAGES.DEPARTMENT.ALREADY_EXISTS);
     }
 
-    // Create department
     return this.prisma.refDepartemen.create({
       data: createDepartmentDto,
       include: {
         _count: {
-          select: {
-            jabatan: true,
-          },
+          select: { jabatans: true }, // fix: jabatan → jabatans
         },
       },
     });
@@ -61,31 +53,17 @@ export class DepartmentService {
       sortOrder = 'desc',
     } = query;
 
-    // Build where clause
     const where: Prisma.RefDepartemenWhereInput = {};
 
-    // Search filter (case-insensitive)
     if (search) {
       where.OR = [
-        {
-          namaDepartemen: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-        {
-          deskripsi: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
+        { namaDepartemen: { contains: search, mode: 'insensitive' } },
+        { deskripsi: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    // Pagination
     const skip = (page - 1) * limit;
 
-    // Execute query with transaction
     const [data, total] = await this.prisma.$transaction([
       this.prisma.refDepartemen.findMany({
         where,
@@ -95,9 +73,7 @@ export class DepartmentService {
         include: includeRelations
           ? {
               _count: {
-                select: {
-                  jabatan: true,
-                },
+                select: { jabatans: true }, // fix: jabatan → jabatans
               },
             }
           : undefined,
@@ -123,9 +99,7 @@ export class DepartmentService {
       where: { idDepartemen: id },
       include: {
         _count: {
-          select: {
-            jabatan: true,
-          },
+          select: { jabatans: true }, // fix: jabatan → jabatans
         },
       },
     });
@@ -138,10 +112,8 @@ export class DepartmentService {
   }
 
   async update(id: string, updateDepartmentDto: UpdateDepartmentDto) {
-    // Check if department exists
     await this.findOne(id);
 
-    // Check duplicate name if being updated
     if (updateDepartmentDto.namaDepartemen) {
       const exists = await this.prisma.refDepartemen.findFirst({
         where: {
@@ -161,25 +133,20 @@ export class DepartmentService {
       }
     }
 
-    // Update department
     return this.prisma.refDepartemen.update({
       where: { idDepartemen: id },
       data: updateDepartmentDto,
       include: {
         _count: {
-          select: {
-            jabatan: true,
-          },
+          select: { jabatans: true }, // fix: jabatan → jabatans
         },
       },
     });
   }
 
   async remove(id: string) {
-    // Check if department exists
     await this.findOne(id);
 
-    // Check if department has jabatan
     const jabatanCount = await this.prisma.refJabatan.count({
       where: { idDepartemen: id },
     });
@@ -190,7 +157,6 @@ export class DepartmentService {
       );
     }
 
-    // Delete department
     return this.prisma.refDepartemen.delete({
       where: { idDepartemen: id },
     });
@@ -200,14 +166,10 @@ export class DepartmentService {
     const departemen = await this.findOne(id);
 
     const [jabatanCount, karyawanCount] = await Promise.all([
-      this.prisma.refJabatan.count({
-        where: { idDepartemen: id },
-      }),
+      this.prisma.refJabatan.count({ where: { idDepartemen: id } }),
       this.prisma.refKaryawan.count({
         where: {
-          jabatan: {
-            idDepartemen: id,
-          },
+          jabatan: { idDepartemen: id },
           statusKeaktifan: true,
         },
       }),
@@ -223,56 +185,40 @@ export class DepartmentService {
   }
 
   async autocomplete(query: string, limit: number = 10) {
-    if (!query || query.length < 2) {
-      return [];
-    }
+    if (!query || query.length < 2) return [];
 
     return this.prisma.refDepartemen.findMany({
       where: {
-        namaDepartemen: {
-          contains: query,
-          mode: 'insensitive',
-        },
+        namaDepartemen: { contains: query, mode: 'insensitive' },
       },
-      select: {
-        idDepartemen: true,
-        namaDepartemen: true,
-      },
+      select: { idDepartemen: true, namaDepartemen: true },
       take: limit,
-      orderBy: {
-        namaDepartemen: 'asc',
-      },
+      orderBy: { namaDepartemen: 'asc' },
     });
   }
 
   async getAllStats() {
     const total = await this.prisma.refDepartemen.count();
-
-    return {
-      total,
-    };
+    return { total };
   }
 
   async bulkDelete(dto: BulkDeleteDepartmentDto) {
     const { ids } = dto;
 
-    // Check if departments have jabatan
     const departmentsWithJabatan = await this.prisma.refDepartemen.findMany({
-      where: {
-        idDepartemen: { in: ids },
-      },
+      where: { idDepartemen: { in: ids } },
       select: {
         idDepartemen: true,
         namaDepartemen: true,
         _count: {
-          select: {
-            jabatan: true,
-          },
+          select: { jabatans: true }, // fix: jabatan → jabatans
         },
       },
     });
 
-    const blocked = departmentsWithJabatan.filter((d) => d._count.jabatan > 0);
+    const blocked = departmentsWithJabatan.filter(
+      (d) => d._count.jabatans > 0, // fix: jabatan → jabatans
+    );
 
     if (blocked.length > 0) {
       throw new BadRequestException(
@@ -280,25 +226,16 @@ export class DepartmentService {
       );
     }
 
-    // Delete departments
     const result = await this.prisma.refDepartemen.deleteMany({
-      where: {
-        idDepartemen: { in: ids },
-      },
+      where: { idDepartemen: { in: ids } },
     });
 
-    return {
-      deleted: result.count,
-      ids,
-    };
+    return { deleted: result.count, ids };
   }
 
   async checkDuplicate(name: string, excludeId?: string): Promise<boolean> {
     const where: Prisma.RefDepartemenWhereInput = {
-      namaDepartemen: {
-        equals: name,
-        mode: 'insensitive',
-      },
+      namaDepartemen: { equals: name, mode: 'insensitive' },
     };
 
     if (excludeId) {

@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { KaryawanController } from './karyawan.controller';
 import { KaryawanService } from './karyawan.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { UploadModule } from 'src/upload/upload.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, UploadModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [KaryawanController],
   providers: [KaryawanService],
   exports: [KaryawanService],
