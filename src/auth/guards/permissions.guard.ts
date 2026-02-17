@@ -13,7 +13,7 @@ import {
   PERMISSION_KEY,
   RequiredPermission,
 } from '../decorators/permissions.decorator';
-import { hasPermission } from '../../common/constants/Permission.constant';
+import { hasPermission } from '../../common/constants/permission.constant';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
