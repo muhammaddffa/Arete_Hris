@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsUUID,
   IsBoolean,
-  IsInt,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -28,15 +27,6 @@ export class CreateJabatanDto {
   @IsUUID()
   @IsNotEmpty()
   idDepartemen: string;
-
-  @ApiProperty({
-    description: 'ID Role Default untuk jabatan ini',
-    example: 4,
-  })
-  @IsInt()
-  @IsNotEmpty()
-  @Type(() => Number)
-  idRoleDefault: number;
 
   @ApiPropertyOptional({
     description: 'ID Atasan (UUID)',
@@ -64,6 +54,7 @@ export class CreateJabatanDto {
   @IsOptional()
   status?: boolean;
 }
+// Catatan: idRoleDefault dihapus — permission sekarang dari jabatan_permission
 
 export class UpdateJabatanDto {
   @ApiPropertyOptional({
@@ -83,15 +74,6 @@ export class UpdateJabatanDto {
   @IsUUID()
   @IsOptional()
   idDepartemen?: string;
-
-  @ApiPropertyOptional({
-    description: 'ID Role Default untuk jabatan ini',
-    example: 4,
-  })
-  @IsInt()
-  @IsOptional()
-  @Type(() => Number)
-  idRoleDefault?: number;
 
   @ApiPropertyOptional({
     description: 'ID Atasan (UUID)',
@@ -118,6 +100,7 @@ export class UpdateJabatanDto {
   @IsOptional()
   status?: boolean;
 }
+// Catatan: idRoleDefault dihapus — permission sekarang dari jabatan_permission
 
 export class QueryJabatanDto {
   @ApiPropertyOptional({
@@ -137,7 +120,7 @@ export class QueryJabatanDto {
   idDepartemen?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by status',
+    description: 'Filter by status aktif',
     example: true,
   })
   @Type(() => Boolean)
@@ -145,11 +128,7 @@ export class QueryJabatanDto {
   @IsOptional()
   status?: boolean;
 
-  @ApiPropertyOptional({
-    description: 'Page number',
-    example: 1,
-    default: 1,
-  })
+  @ApiPropertyOptional({ description: 'Page number', example: 1, default: 1 })
   @Type(() => Number)
   @IsOptional()
   page?: number = 1;
@@ -174,13 +153,10 @@ export class JabatanResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   idDepartemen: string;
 
-  @ApiProperty({ example: 4 })
-  idRoleDefault: number;
-
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
   idAtasan: string | null;
 
-  @ApiProperty({ example: 'Bertanggung jawab untuk develop aplikasi' })
+  @ApiPropertyOptional({ example: 'Bertanggung jawab untuk develop aplikasi' })
   deskripsiJabatan: string | null;
 
   @ApiProperty({ example: true })
@@ -199,15 +175,18 @@ export class JabatanResponseDto {
     deskripsi: string | null;
   };
 
+  // Permission dari jabatan (bitmask)
   @ApiPropertyOptional()
-  roleDefault?: {
-    idRole: number;
-    namaRole: string;
-    level: number;
-  };
+  permissions?: {
+    levelAkses: number;
+    permission: {
+      idPermission: number;
+      namaPermission: string;
+    };
+  }[];
 
   @ApiPropertyOptional()
   _count?: {
-    karyawan: number;
+    karyawans: number; // fix: karyawan → karyawans
   };
 }

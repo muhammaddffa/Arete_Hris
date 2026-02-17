@@ -24,7 +24,7 @@ import type {
 } from './dto/answer.dto';
 
 import {
-  FilterAnswerDto, // Class DTO
+  FilterAnswerDto,
   CreateAnswerSchema,
   SubmitFormSchema,
   UpdateAnswerSchema,
@@ -33,20 +33,21 @@ import {
 
 import { ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-// import { Public } from '../auth/decorators/public.decorator';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @ApiTags('Answer')
 @Controller('answers')
-// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AnswerController {
   constructor(private readonly answerService: AnswerService) {}
 
   @Post()
+  @RequirePermission('answer_form', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ZodValidationPipe(CreateAnswerSchema))
   @ApiOperation({ summary: 'Create single answer' })
@@ -56,6 +57,7 @@ export class AnswerController {
   }
 
   @Post('submit')
+  @RequirePermission('answer_form', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ZodValidationPipe(SubmitFormSchema))
   @ApiOperation({ summary: 'Submit form (bulk answers)' })
@@ -64,10 +66,18 @@ export class AnswerController {
     return ResponseUtil.created(data, RESPONSE_MESSAGES.ANSWER.SUBMITTED);
   }
 
+  @Post('export')
+  @RequirePermission('view_form_responses', PERMISSION.READ)
+  @UsePipes(new ZodValidationPipe(ExportAnswersSchema))
+  @ApiOperation({ summary: 'Export answers' })
+  async exportAnswers(@Body() exportDto: ExportAnswersDto) {
+    const data = await this.answerService.exportAnswers(exportDto);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.EXPORTED);
+  }
+
   @Get()
-  //   @UseGuards(PermissionsGuard)
-  //   @RequirePermissions('view_all_answers')
-  @ApiOperation({ summary: 'Get all answers (HRD & Manager)' })
+  @RequirePermission('view_form_responses', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua answers' })
   async findAll(@Query() query: FilterAnswerDto) {
     const result = await this.answerService.findAll(query);
     return ResponseUtil.successWithMeta(
@@ -78,16 +88,16 @@ export class AnswerController {
   }
 
   @Get('form/:idForm')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('view_form_responses')
-  @ApiOperation({ summary: 'Get all responses for a form (HRD & Manager)' })
+  @RequirePermission('view_form_responses', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua responses untuk satu form' })
   async findByFormId(@Param('idForm', ParseUUIDPipe) idForm: string) {
     const data = await this.answerService.findByFormId(idForm);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.RESPONSES_LIST);
   }
 
   @Get('form/:idForm/user/:idKaryawan')
-  @ApiOperation({ summary: "Get user's answers for a form" })
+  @RequirePermission('answer_form', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get jawaban karyawan untuk satu form' })
   async findUserAnswers(
     @Param('idForm', ParseUUIDPipe) idForm: string,
     @Param('idKaryawan', ParseUUIDPipe) idKaryawan: string,
@@ -97,23 +107,15 @@ export class AnswerController {
   }
 
   @Get(':id')
+  @RequirePermission('answer_form', PERMISSION.READ)
   @ApiOperation({ summary: 'Get answer by ID' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.answerService.findOne(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.FOUND);
   }
 
-  @Post('export')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('export_answers')
-  @UsePipes(new ZodValidationPipe(ExportAnswersSchema))
-  @ApiOperation({ summary: 'Export answers (HRD & Manager)' })
-  async exportAnswers(@Body() exportDto: ExportAnswersDto) {
-    const data = await this.answerService.exportAnswers(exportDto);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.EXPORTED);
-  }
-
   @Patch(':id')
+  @RequirePermission('answer_form', PERMISSION.UPDATE)
   @UsePipes(new ZodValidationPipe(UpdateAnswerSchema))
   @ApiOperation({ summary: 'Update answer' })
   async update(
@@ -124,22 +126,24 @@ export class AnswerController {
     return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.UPDATED);
   }
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete answer' })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.answerService.remove(id);
-    return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.DELETED);
-  }
-
   @Delete('form/:idForm/user/:idKaryawan')
+  @RequirePermission('answer_form', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Delete user's all answers for a form" })
+  @ApiOperation({ summary: 'Hapus semua jawaban karyawan untuk satu form' })
   async removeUserAnswers(
     @Param('idForm', ParseUUIDPipe) idForm: string,
     @Param('idKaryawan', ParseUUIDPipe) idKaryawan: string,
   ) {
     const data = await this.answerService.removeUserAnswers(idForm, idKaryawan);
+    return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.DELETED);
+  }
+
+  @Delete(':id')
+  @RequirePermission('answer_form', PERMISSION.DELETE)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete answer by ID' })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.answerService.remove(id);
     return ResponseUtil.success(data, RESPONSE_MESSAGES.ANSWER.DELETED);
   }
 }

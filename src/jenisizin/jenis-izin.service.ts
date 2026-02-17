@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -28,9 +25,7 @@ export class JenisIzinService {
       );
     }
 
-    return this.prisma.refJenisIzin.create({
-      data: createDto,
-    });
+    return this.prisma.refJenisIzin.create({ data: createDto });
   }
 
   async findAll(page: number = 1, limit: number = 10) {
@@ -53,7 +48,7 @@ export class JenisIzinService {
       where: { idJenisIzin: id },
       include: {
         _count: {
-          select: { pengajuanIzin: true },
+          select: { pengajuanIzins: true }, // fix: pengajuanIzin → pengajuanIzins
         },
       },
     });

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -12,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +17,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { PengajuanLemburService } from './pengajuan-lembur.service';
 import {
@@ -28,15 +27,22 @@ import {
 } from './dto/pengajuan-lembur.dto';
 import { createResponse } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Pengajuan Lembur')
 @Controller('pengajuan-lembur')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PengajuanLemburController {
   constructor(
     private readonly pengajuanLemburService: PengajuanLemburService,
   ) {}
 
   @Post()
+  @RequirePermission('submit_lembur', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Buat pengajuan lembur baru' })
   @ApiResponse({ status: 201, description: 'Pengajuan lembur berhasil dibuat' })
@@ -50,6 +56,7 @@ export class PengajuanLemburController {
   }
 
   @Get()
+  @RequirePermission('submit_lembur', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get semua pengajuan lembur' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -60,7 +67,6 @@ export class PengajuanLemburController {
   @ApiQuery({ name: 'tanggalLembur', required: false, example: '2025-01-15' })
   @ApiQuery({ name: 'startDate', required: false, example: '2025-01-01' })
   @ApiQuery({ name: 'endDate', required: false, example: '2025-12-31' })
-  @ApiResponse({ status: 200, description: 'Daftar pengajuan lembur' })
   async findAll(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
@@ -85,12 +91,12 @@ export class PengajuanLemburController {
   }
 
   @Get('karyawan/:idKaryawan/total')
+  @RequirePermission('submit_lembur', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get total jam lembur by karyawan & period' })
   @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
   @ApiQuery({ name: 'month', required: true, example: 1 })
   @ApiQuery({ name: 'year', required: true, example: 2025 })
-  @ApiResponse({ status: 200, description: 'Total jam lembur' })
   async getTotalJamLembur(
     @Param('idKaryawan') idKaryawan: string,
     @Query('month') month: string,
@@ -109,10 +115,10 @@ export class PengajuanLemburController {
   }
 
   @Get(':id')
+  @RequirePermission('submit_lembur', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get pengajuan lembur by ID' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({ status: 200, description: 'Detail pengajuan lembur' })
   async findOne(@Param('id') id: string) {
     const data = await this.pengajuanLemburService.findOne(id);
     return createResponse(
@@ -123,13 +129,10 @@ export class PengajuanLemburController {
   }
 
   @Patch(':id')
+  @RequirePermission('submit_lembur', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update pengajuan lembur' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pengajuan lembur berhasil diupdate',
-  })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdatePengajuanLemburDto,
@@ -143,13 +146,10 @@ export class PengajuanLemburController {
   }
 
   @Post(':id/approve')
+  @RequirePermission('approve_lembur', PERMISSION.CREATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve pengajuan lembur' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pengajuan lembur berhasil disetujui',
-  })
   async approve(
     @Param('id') id: string,
     @Body() body: { idAtasan: string; catatanAtasan?: string },
@@ -167,13 +167,10 @@ export class PengajuanLemburController {
   }
 
   @Post(':id/reject')
+  @RequirePermission('approve_lembur', PERMISSION.CREATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject pengajuan lembur' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pengajuan lembur berhasil ditolak',
-  })
   async reject(
     @Param('id') id: string,
     @Body() body: { idAtasan: string; catatanAtasan: string },
@@ -191,13 +188,10 @@ export class PengajuanLemburController {
   }
 
   @Post(':id/cancel')
+  @RequirePermission('submit_lembur', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Cancel pengajuan lembur (by karyawan)' })
+  @ApiOperation({ summary: 'Cancel pengajuan lembur' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pengajuan lembur berhasil dibatalkan',
-  })
   async cancel(@Param('id') id: string) {
     const data = await this.pengajuanLemburService.cancel(id);
     return createResponse(
@@ -208,13 +202,10 @@ export class PengajuanLemburController {
   }
 
   @Delete(':id')
+  @RequirePermission('submit_lembur', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Hapus pengajuan lembur' })
   @ApiParam({ name: 'id', description: 'ID Pengajuan Lembur (UUID)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Pengajuan lembur berhasil dihapus',
-  })
   async remove(@Param('id') id: string) {
     await this.pengajuanLemburService.remove(id);
     return createResponse(

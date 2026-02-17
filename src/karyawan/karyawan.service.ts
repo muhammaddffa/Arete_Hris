@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable prefer-const */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // src/karyawan/karyawan.service.ts
@@ -17,173 +17,43 @@ import * as bcrypt from 'bcrypt';
 export class KaryawanService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Assign custom role ke karyawan (override jabatan default)
-   */
-  async assignCustomRole(idKaryawan: string, roleIds: number[]) {
-    const karyawan = await this.prisma.refKaryawan.findUnique({
-      where: { idKaryawan },
-    });
-
-    if (!karyawan || karyawan.status !== StatusKaryawan.aktif) {
-      throw new BadRequestException('Karyawan tidak aktif');
-    }
-
-    // Hapus role lama
-    await this.prisma.karyawanRole.deleteMany({
-      where: { idKaryawan },
-    });
-
-    // Assign role baru
-    await this.prisma.karyawanRole.createMany({
-      data: roleIds.map((idRole) => ({
-        idKaryawan,
-        idRole,
-      })),
-    });
-
-    // Set useJabatanRole = false (pakai custom role)
-    await this.prisma.refKaryawan.update({
-      where: { idKaryawan },
-      data: { useJabatanRole: false },
-    });
-
-    return { message: 'Custom role berhasil di-assign' };
-  }
+  // ============================================================
+  // PERMISSION OVERRIDE
+  // ============================================================
 
   /**
-   * Reset ke role default JABATAN
-   */
-  async resetToJabatanRole(idKaryawan: string) {
-    const karyawan = await this.prisma.refKaryawan.findUnique({
-      where: { idKaryawan },
-      include: {
-        jabatan: {
-          include: {
-            roleDefault: true,
-          },
-        },
-      },
-    });
-
-    if (!karyawan) {
-      throw new NotFoundException('Karyawan tidak ditemukan');
-    }
-
-    // Hapus custom role
-    await this.prisma.karyawanRole.deleteMany({
-      where: { idKaryawan },
-    });
-
-    // Assign role default JABATAN
-    await this.prisma.karyawanRole.create({
-      data: {
-        idKaryawan,
-        idRole: karyawan.jabatan.idRoleDefault,
-      },
-    });
-
-    // Set useJabatanRole = true
-    await this.prisma.refKaryawan.update({
-      where: { idKaryawan },
-      data: { useJabatanRole: true },
-    });
-
-    return { message: 'Role berhasil di-reset ke default jabatan' };
-  }
-
-  /**
-   * Upgrade ke role jabatan (dari role Karyawan default)
-   */
-  async upgradeToJabatanRole(idKaryawan: string, grantedBy: string) {
-    const karyawan = await this.prisma.refKaryawan.findUnique({
-      where: { idKaryawan },
-      include: {
-        jabatan: {
-          include: {
-            roleDefault: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!karyawan) {
-      throw new NotFoundException('Karyawan tidak ditemukan');
-    }
-
-    // Hapus role lama (role Karyawan default)
-    await this.prisma.karyawanRole.deleteMany({
-      where: { idKaryawan },
-    });
-
-    // Assign role jabatan
-    await this.prisma.karyawanRole.create({
-      data: {
-        idKaryawan,
-        idRole: karyawan.jabatan.idRoleDefault,
-      },
-    });
-
-    // Set useJabatanRole = true
-    await this.prisma.refKaryawan.update({
-      where: { idKaryawan },
-      data: { useJabatanRole: true },
-    });
-
-    return {
-      message: 'Karyawan berhasil di-upgrade ke role jabatan',
-      previousRole: 'Karyawan (basic access)',
-      newRole: karyawan.jabatan.roleDefault.namaRole,
-      permissions: karyawan.jabatan.roleDefault.permissions.map(
-        (p) => p.permission,
-      ),
-    };
-  }
-
-  /**
-   * Add permission override (add extra permission ke karyawan)
-   * WITH AUDIT LOG
+   * Grant permission override ke karyawan + audit log
    */
   async addPermissionOverride(
     idKaryawan: string,
     idPermission: number,
+    levelAkses: number, // bitmask: READ=1, CREATE=2, UPDATE=4, DELETE=8
     deskripsi: string | undefined,
-    grantedBy: string, // ID of user who grants this permission (usually HRD)
+    grantedBy: string,
   ) {
     await this.prisma.karyawanPermissionOverride.upsert({
-      where: {
-        idKaryawan_idPermission: {
-          idKaryawan,
-          idPermission,
-        },
-      },
+      where: { idKaryawan_idPermission: { idKaryawan, idPermission } },
       create: {
         idKaryawan,
         idPermission,
-        typePermission: true, // ADD permission
+        typePermission: true, // grant
+        levelAkses,
         deskripsi,
       },
       update: {
         typePermission: true,
+        levelAkses,
         deskripsi,
       },
     });
 
-    // Create audit log
     await this.prisma.permissionAuditLog.create({
       data: {
         idKaryawan,
         idPermission,
-        action: 'ADD',
+        action: 'GRANT',
         typePermission: true,
+        levelAkses,
         grantedBy,
         deskripsi,
       },
@@ -192,6 +62,9 @@ export class KaryawanService {
     return { message: 'Permission berhasil ditambahkan' };
   }
 
+  /**
+   * Revoke permission dari karyawan (cabut permission jabatan) + audit log
+   */
   async removePermissionOverride(
     idKaryawan: string,
     idPermission: number,
@@ -199,42 +72,38 @@ export class KaryawanService {
     grantedBy: string,
   ) {
     await this.prisma.karyawanPermissionOverride.upsert({
-      where: {
-        idKaryawan_idPermission: {
-          idKaryawan,
-          idPermission,
-        },
-      },
+      where: { idKaryawan_idPermission: { idKaryawan, idPermission } },
       create: {
         idKaryawan,
         idPermission,
-        typePermission: false, // REMOVE permission
+        typePermission: false, // revoke
+        levelAkses: null,
         deskripsi,
       },
       update: {
         typePermission: false,
+        levelAkses: null,
         deskripsi,
       },
     });
 
-    // Create audit log
     await this.prisma.permissionAuditLog.create({
       data: {
         idKaryawan,
         idPermission,
-        action: 'REMOVE',
+        action: 'REVOKE',
         typePermission: false,
+        levelAkses: null,
         grantedBy,
         deskripsi,
       },
     });
 
-    return { message: 'Permission berhasil dihapus' };
+    return { message: 'Permission berhasil dicabut' };
   }
 
   /**
-   * Delete permission override (kembalikan ke default role permission)
-   * WITH AUDIT LOG
+   * Hapus override — karyawan kembali ke permission jabatan
    */
   async deletePermissionOverride(
     idKaryawan: string,
@@ -242,12 +111,7 @@ export class KaryawanService {
     grantedBy: string,
   ) {
     const override = await this.prisma.karyawanPermissionOverride.findUnique({
-      where: {
-        idKaryawan_idPermission: {
-          idKaryawan,
-          idPermission,
-        },
-      },
+      where: { idKaryawan_idPermission: { idKaryawan, idPermission } },
     });
 
     if (!override) {
@@ -255,23 +119,18 @@ export class KaryawanService {
     }
 
     await this.prisma.karyawanPermissionOverride.delete({
-      where: {
-        idKaryawan_idPermission: {
-          idKaryawan,
-          idPermission,
-        },
-      },
+      where: { idKaryawan_idPermission: { idKaryawan, idPermission } },
     });
 
-    // Create audit log
     await this.prisma.permissionAuditLog.create({
       data: {
         idKaryawan,
         idPermission,
         action: 'DELETE_OVERRIDE',
         typePermission: override.typePermission,
+        levelAkses: override.levelAkses,
         grantedBy,
-        deskripsi: 'Deleted permission override, back to default',
+        deskripsi: 'Override dihapus, kembali ke permission jabatan',
       },
     });
 
@@ -279,31 +138,24 @@ export class KaryawanService {
   }
 
   /**
-   * Get permission audit logs for a karyawan
+   * Get permission audit logs per karyawan
    */
   async getPermissionAuditLogs(idKaryawan: string) {
-    const logs = await this.prisma.permissionAuditLog.findMany({
+    return this.prisma.permissionAuditLog.findMany({
       where: { idKaryawan },
       include: {
         permission: true,
-        grantor: {
-          select: {
-            idKaryawan: true,
-            nama: true,
-            nik: true,
-          },
+        grantedByKaryawan: {
+          // sesuai nama relasi di schema
+          select: { idKaryawan: true, nama: true, nik: true },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
-
-    return logs;
   }
 
   /**
-   * Get all permission audit logs (for HRD to monitor)
+   * Get semua audit log (untuk HRD monitor)
    */
   async getAllPermissionAuditLogs(filters?: {
     startDate?: Date;
@@ -322,49 +174,49 @@ export class KaryawanService {
       where.action = filters.action;
     }
 
-    const logs = await this.prisma.permissionAuditLog.findMany({
+    return this.prisma.permissionAuditLog.findMany({
       where,
       include: {
         karyawan: {
-          select: {
-            idKaryawan: true,
-            nama: true,
-            nik: true,
-          },
+          select: { idKaryawan: true, nama: true, nik: true },
         },
         permission: true,
-        grantor: {
-          select: {
-            idKaryawan: true,
-            nama: true,
-            nik: true,
-          },
+        grantedByKaryawan: {
+          // sesuai nama relasi di schema
+          select: { idKaryawan: true, nama: true, nik: true },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 100, // Limit to last 100 logs
+      orderBy: { createdAt: 'desc' },
+      take: 100,
     });
-
-    return logs;
   }
 
   /**
-   * Get effective permissions untuk karyawan
-   * Menggabungkan permission dari role + override
+   * Get effective permissions karyawan
+   * Base dari jabatan_permission + override
    */
   async getEffectivePermissions(idKaryawan: string) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan },
-      include: {
-        karyawanRoles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
+      select: {
+        idKaryawan: true,
+        nama: true,
+        username: true,
+        jabatan: {
+          select: {
+            idJabatan: true,
+            namaJabatan: true,
+            departemen: {
+              select: { idDepartemen: true, namaDepartemen: true },
+            },
+            permissions: {
+              select: {
+                levelAkses: true,
+                permission: {
+                  select: {
+                    idPermission: true,
+                    namaPermission: true,
+                    deskripsi: true,
                   },
                 },
               },
@@ -372,20 +224,12 @@ export class KaryawanService {
           },
         },
         karyawanPermissionOverrides: {
-          include: {
-            permission: true,
-          },
-        },
-        jabatan: {
-          include: {
-            roleDefault: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
+          select: {
+            typePermission: true,
+            levelAkses: true,
+            deskripsi: true,
+            permission: {
+              select: { idPermission: true, namaPermission: true },
             },
           },
         },
@@ -396,76 +240,50 @@ export class KaryawanService {
       throw new NotFoundException('Karyawan tidak ditemukan');
     }
 
-    // 1. Get base permissions dari role
-    let basePermissions: Set<number>;
+    // Resolve effective permissions (jabatan + override)
+    const result: Record<string, number> = {};
 
-    if (karyawan.useJabatanRole) {
-      // Pakai role default JABATAN
-      const roleDefault = karyawan.jabatan.roleDefault;
-      basePermissions = new Set(
-        roleDefault.permissions.map((p) => p.permission.idPermission),
-      );
-    } else {
-      // Pakai custom role
-      basePermissions = new Set();
-      karyawan.karyawanRoles.forEach((kr) => {
-        kr.role.permissions.forEach((p) => {
-          basePermissions.add(p.permission.idPermission);
-        });
-      });
+    for (const jp of karyawan.jabatan.permissions) {
+      result[jp.permission.namaPermission] = Number(jp.levelAkses);
     }
 
-    // 2. Apply overrides
-    const overrides = karyawan.karyawanPermissionOverrides;
-
-    overrides.forEach((override) => {
-      if (override.typePermission) {
-        // ADD: tambahkan permission
-        basePermissions.add(override.idPermission);
-      } else {
-        // REMOVE: hapus permission
-        basePermissions.delete(override.idPermission);
+    for (const override of karyawan.karyawanPermissionOverrides) {
+      const nama = override.permission.namaPermission;
+      if (!override.typePermission) {
+        delete result[nama]; // revoke
+      } else if (override.levelAkses !== null) {
+        result[nama] = Number(override.levelAkses); // grant
       }
-    });
-
-    // 3. Get full permission details
-    const effectivePermissions = await this.prisma.refPermission.findMany({
-      where: {
-        idPermission: {
-          in: Array.from(basePermissions),
-        },
-      },
-    });
+    }
 
     return {
       karyawan: {
         idKaryawan: karyawan.idKaryawan,
         nama: karyawan.nama,
         username: karyawan.username,
-        useJabatanRole: karyawan.useJabatanRole,
       },
-      jabatan: karyawan.jabatan,
-      roles: karyawan.useJabatanRole
-        ? [karyawan.jabatan.roleDefault]
-        : karyawan.karyawanRoles.map((kr) => kr.role),
-      effectivePermissions,
-      overrides: overrides.map((o) => ({
+      jabatan: {
+        idJabatan: karyawan.jabatan.idJabatan,
+        namaJabatan: karyawan.jabatan.namaJabatan,
+        departemen: karyawan.jabatan.departemen,
+      },
+      // { namaPermission → levelAkses bitmask }
+      effectivePermissions: result,
+      overrides: karyawan.karyawanPermissionOverrides.map((o) => ({
         permission: o.permission,
-        type: o.typePermission ? 'ADD' : 'REMOVE',
+        type: o.typePermission ? 'GRANT' : 'REVOKE',
+        levelAkses: o.levelAkses,
         deskripsi: o.deskripsi,
       })),
     };
   }
 
-  // Helper methods
-  private generateUsername(nama: string, nik: string): string {
-    const cleanNama = nama.toLowerCase().replace(/\s+/g, '.');
-    return `${cleanNama}.${nik.slice(-4)}`;
-  }
+  // ============================================================
+  // KARYAWAN CRUD
+  // ============================================================
 
   async create(createKaryawanDto: any) {
     try {
-      // Validate jabatan exists
       const jabatan = await this.prisma.refJabatan.findUnique({
         where: { idJabatan: createKaryawanDto.idJabatan },
       });
@@ -474,7 +292,6 @@ export class KaryawanService {
         throw new BadRequestException('Jabatan tidak ditemukan');
       }
 
-      // Transform dates
       const data = {
         ...createKaryawanDto,
         tanggalLahir: createKaryawanDto.tanggalLahir
@@ -483,16 +300,11 @@ export class KaryawanService {
         tanggalMasuk: createKaryawanDto.tanggalMasuk
           ? new Date(createKaryawanDto.tanggalMasuk)
           : new Date(),
-
         status: StatusKaryawan.candidate,
         statusKeaktifan: false,
-
         username: null,
         passwordHash: null,
-        useJabatanRole: true,
         isActive: false,
-
-        // Reset auth fields
         lastLogin: null,
         loginAttempts: 0,
         lockedUntil: null,
@@ -500,14 +312,11 @@ export class KaryawanService {
         resetTokenExpires: null,
       };
 
-      // Create WITHOUT role assignment
       const karyawan = await this.prisma.refKaryawan.create({
         data,
         include: {
           jabatan: {
-            include: {
-              departemen: true,
-            },
+            include: { departemen: true },
           },
         },
       });
@@ -527,9 +336,6 @@ export class KaryawanService {
     }
   }
 
-  /**
-   * Find all karyawan
-   */
   async findAll(filterDto: any) {
     const {
       page = 1,
@@ -540,10 +346,8 @@ export class KaryawanService {
       search,
     } = filterDto;
 
-    // ✅ PARSE to number & validate
     const validPage = Math.max(1, parseInt(page as string) || 1);
     const validLimit = Math.max(1, parseInt(limit as string) || 10);
-
     const skip = (validPage - 1) * validLimit;
     const where: any = {};
 
@@ -556,22 +360,18 @@ export class KaryawanService {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-
     if (idDepartemen) {
       where.jabatan = { idDepartemen };
     }
 
-    const [rawData, total] = await Promise.all([
+    const [data, total] = await Promise.all([
       this.prisma.refKaryawan.findMany({
         where,
         skip,
-        take: validLimit, // ✅ Use parsed number
+        take: validLimit,
         include: {
           jabatan: {
-            include: {
-              departemen: true,
-              roleDefault: true,
-            },
+            include: { departemen: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -579,53 +379,38 @@ export class KaryawanService {
       this.prisma.refKaryawan.count({ where }),
     ]);
 
-    // ✅ FIX: Safe transform dengan null check
-    const data = rawData.map((karyawan) => {
-      // Check if jabatan exists
-      if (!karyawan.jabatan) {
-        return karyawan;
-      }
-
-      // Only transform for candidates
-      if (karyawan.status === StatusKaryawan.candidate) {
-        const { roleDefault, ...jabatanSansRole } = karyawan.jabatan;
-        return {
-          ...karyawan,
-          jabatan: jabatanSansRole,
-        };
-      }
-
-      return karyawan;
-    });
-
     const totalPages = Math.ceil(total / validLimit);
 
     return {
       data,
       meta: {
-        page: validPage, // ✅ Return validated values
+        page: validPage,
         limit: validLimit,
         total,
-        totalPages: totalPages,
+        totalPages,
         hasNextPage: validPage < totalPages,
         hasPrevPage: validPage > 1,
       },
     };
   }
-  /**
-   * Find one by ID
-   */
-  async findOne(id: string, includeUser: boolean = false) {
+
+  async findOne(id: string) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: id },
       include: {
         jabatan: {
           include: {
             departemen: true,
-            roleDefault: true,
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
           },
         },
-        karyawanRoles: includeUser ? { include: { role: true } } : undefined,
+        karyawanPermissionOverrides: {
+          include: { permission: true },
+        },
       },
     });
 
@@ -636,9 +421,6 @@ export class KaryawanService {
     return karyawan;
   }
 
-  /**
-   * Find one raw (internal)
-   */
   async findOneRaw(id: string) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
       where: { idKaryawan: id },
@@ -651,57 +433,43 @@ export class KaryawanService {
     return karyawan;
   }
 
-  /**
-   * Update karyawan
-   */
   async update(id: string, updateKaryawanDto: any) {
     await this.findOneRaw(id);
 
-    // Transform dates if present
     const data: any = { ...updateKaryawanDto };
     if (data.tanggalLahir) data.tanggalLahir = new Date(data.tanggalLahir);
     if (data.tanggalMasuk) data.tanggalMasuk = new Date(data.tanggalMasuk);
     if (data.tanggalResign) data.tanggalResign = new Date(data.tanggalResign);
 
-    const karyawan = await this.prisma.refKaryawan.update({
+    return this.prisma.refKaryawan.update({
       where: { idKaryawan: id },
       data,
       include: {
         jabatan: {
-          include: {
-            departemen: true,
-            roleDefault: true,
-          },
+          include: { departemen: true },
         },
       },
     });
-
-    return karyawan;
   }
 
-  /**
-   * Delete (soft delete)
-   */
   async remove(id: string) {
     await this.findOneRaw(id);
 
     await this.prisma.refKaryawan.update({
       where: { idKaryawan: id },
-      data: {
-        statusKeaktifan: false,
-        isActive: false,
-      },
+      data: { statusKeaktifan: false, isActive: false },
     });
 
     return { message: 'Karyawan berhasil dihapus' };
   }
 
+  // ============================================================
+  // STATUS KARYAWAN
+  // ============================================================
+
   /**
-   * Approve candidate → Auto-generate credentials + assign role jabatan
-   * ✅ Dapat role dari jabatan
-   * ✅ Username & password auto-generated dari nama
-   * ✅ Password di-hash
-   * ✅ Bisa login langsung
+   * Approve candidate → aktifkan akun + auto-generate credentials
+   * Permission otomatis dari jabatan_permission
    */
   async approveCandidate(id: string) {
     const karyawan = await this.prisma.refKaryawan.findUnique({
@@ -709,14 +477,9 @@ export class KaryawanService {
       include: {
         jabatan: {
           include: {
-            roleDefault: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
+            departemen: true,
+            permissions: {
+              include: { permission: true },
             },
           },
         },
@@ -731,27 +494,24 @@ export class KaryawanService {
       throw new BadRequestException('Karyawan bukan candidate');
     }
 
-    // ✅ 1. AUTO-GENERATE username dari nama
+    // Auto-generate username dari nama
     let baseUsername = this.generateUsernameFromName(karyawan.nama);
     let username = baseUsername;
     let counter = 1;
 
-    // Check uniqueness
     while (await this.isUsernameExists(username)) {
       username = `${baseUsername}.${counter}`;
       counter++;
     }
 
-    // ✅ 2. AUTO-GENERATE password dari nama (plain)
+    // Auto-generate password dari nama
     const plainPassword = karyawan.nama
       .toLowerCase()
-      .replace(/\s+/g, '') // Hapus spasi
-      .replace(/[^a-z0-9]/g, ''); // Hanya huruf & angka
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9]/g, '');
 
-    // ✅ 3. HASH password
     const passwordHash = await bcrypt.hash(plainPassword, 10);
 
-    // ✅ 4. Update: aktif + credentials
     const updated = await this.prisma.refKaryawan.update({
       where: { idKaryawan: id },
       data: {
@@ -759,47 +519,35 @@ export class KaryawanService {
         statusKeaktifan: true,
         username,
         passwordHash,
-        useJabatanRole: true, // ✅ Pakai role jabatan
-        isActive: true, // ✅ BISA LOGIN
+        isActive: true,
+        mustChangePassword: true,
       },
       include: {
         jabatan: {
           include: {
             departemen: true,
-            roleDefault: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
+            permissions: {
+              include: { permission: true },
             },
           },
         },
       },
     });
 
-    await this.prisma.karyawanRole.create({
-      data: {
-        idKaryawan: id,
-        idRole: updated.jabatan.idRoleDefault,
-      },
-    });
-
     return {
       karyawan: updated,
       message:
-        'Candidate berhasil di-approve. Account sudah aktif dan bisa login.',
+        'Candidate berhasil di-approve. Akun sudah aktif dan bisa login.',
       credentials: {
         username,
         password: plainPassword,
-        info: 'Simpan password ini! Di database sudah ter-hash.',
+        info: 'Berikan credentials ini ke karyawan. Mereka wajib ganti password saat login pertama.',
       },
-      role: updated.jabatan.roleDefault,
-      permissions: updated.jabatan.roleDefault.permissions.map(
-        (p) => p.permission,
-      ),
+      // Tampilkan permission dari jabatan
+      jabatanPermissions: updated.jabatan.permissions.map((jp) => ({
+        namaPermission: jp.permission.namaPermission,
+        levelAkses: jp.levelAkses,
+      })),
     };
   }
 
@@ -810,15 +558,13 @@ export class KaryawanService {
       throw new BadRequestException('Karyawan bukan candidate');
     }
 
-    const updated = await this.prisma.refKaryawan.update({
+    return this.prisma.refKaryawan.update({
       where: { idKaryawan: id },
       data: {
         status: StatusKaryawan.rejected,
         statusKeaktifan: false,
       },
     });
-
-    return updated;
   }
 
   async resignKaryawan(id: string, tanggalResign?: Date) {
@@ -828,7 +574,7 @@ export class KaryawanService {
       throw new BadRequestException('Hanya karyawan aktif yang bisa resign');
     }
 
-    const updated = await this.prisma.refKaryawan.update({
+    return this.prisma.refKaryawan.update({
       where: { idKaryawan: id },
       data: {
         status: StatusKaryawan.resign,
@@ -837,22 +583,24 @@ export class KaryawanService {
         tanggalResign: tanggalResign || new Date(),
       },
     });
-
-    return updated;
   }
 
-  // Helper methods
+  // ============================================================
+  // Private helpers
+  // ============================================================
+
   private generateUsernameFromName(nama: string): string {
     return nama
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '.') // Spasi → titik
-      .replace(/[^a-z0-9.]/g, ''); // Hanya huruf, angka, titik
+      .replace(/\s+/g, '.')
+      .replace(/[^a-z0-9.]/g, '');
   }
 
   private async isUsernameExists(username: string): Promise<boolean> {
     const exists = await this.prisma.refKaryawan.findUnique({
       where: { username },
+      select: { idKaryawan: true },
     });
     return !!exists;
   }

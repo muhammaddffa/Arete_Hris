@@ -7,6 +7,7 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
 import { DepartmentModule } from './department/department.module';
 import { JabatanModule } from './jabatan/jabatan.module';
 import { KaryawanModule } from './karyawan/karyawan.module';
@@ -17,44 +18,43 @@ import { JadwalKerjaModule } from './jadwalkerja/jadwal-kerja.module';
 import { KaryawanJadwalModule } from './jadwalkaryawan/karyawan-jadwal.module';
 import { PresensiModule } from './presensi/presensi.module';
 import { JenisIzinModule } from './jenisizin/jenis-izin.module';
-import { SaldoCutiModule } from './saldocuti/saldo.cuti.module';
+import { SaldoCutiModule } from './saldocuti/saldo-cuti.module';
 import { PengajuanIzinModule } from './pengajuanizin/pengajuan-izin.module';
 import { PengajuanLemburModule } from './pengajuanlembur/pengajuan-lembur.module';
-import { AuthModule } from './auth/auth.module';
-import { RoleModule } from './role/role.module';
 import { FormModule } from './form/form.module';
 import { QuestionModule } from './question/question.module';
 import { OptionModule } from './option/option.module';
 import { AnswerModule } from './answer/answer.module';
+// RoleModule dihapus — tidak ada lagi tabel role
+
 @Module({
   imports: [
+    // Static file serving
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
       serveStaticOptions: {
-        index: false, // Disable directory listing
-        // Optional: Add cache control for better performance
+        index: false,
         setHeaders: (res) => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-          res.set('Cache-Control', 'public, max-age=31536000'); // 1 year
+          res.set('Cache-Control', 'public, max-age=31536000');
         },
       },
-    }),
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'), // folder uploads
-      serveRoot: '/uploads',
     }),
 
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    // Core
     PrismaModule,
+    AuthModule,
+
+    // Feature modules
     DepartmentModule,
-    UploadModule,
     JabatanModule,
     KaryawanModule,
+    UploadModule,
     BlacklistModule,
     WawancaraModule,
     JadwalKerjaModule,
@@ -64,8 +64,6 @@ import { AnswerModule } from './answer/answer.module';
     SaldoCutiModule,
     PengajuanIzinModule,
     PengajuanLemburModule,
-    AuthModule,
-    RoleModule,
     FormModule,
     QuestionModule,
     OptionModule,

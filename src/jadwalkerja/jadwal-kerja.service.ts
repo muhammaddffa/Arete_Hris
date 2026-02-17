@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -123,7 +119,7 @@ export class JadwalKerjaService {
     const jadwal = await this.prisma.refJadwalKerja.findUnique({
       where: { idJadwal: id },
       include: {
-        karyawanJadwal: {
+        karyawanJadwals: {
           include: {
             karyawan: {
               select: {
@@ -223,11 +219,11 @@ export class JadwalKerjaService {
       take: 5,
       include: {
         _count: {
-          select: { karyawanJadwal: true },
+          select: { karyawanJadwals: true },
         },
       },
       orderBy: {
-        karyawanJadwal: {
+        karyawanJadwals: {
           _count: 'desc',
         },
       },

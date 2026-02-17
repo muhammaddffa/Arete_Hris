@@ -1,8 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Controller,
   Post,
@@ -29,30 +27,31 @@ import {
 import { KaryawanService } from './karyawan.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { ResponseUtil } from '../common/utils/response.util';
 import { CloudinaryService } from '../upload/cloudinary.service';
 import { allFileFilter } from '../upload/multer-cloudinary.config';
-import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Karyawan')
 @Controller('karyawan')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class KaryawanController {
   constructor(
     private karyawanService: KaryawanService,
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  /**
-   * POST /karyawan
-   * Create karyawan baru (status: candidate)
-   * Required permission: 'create_karyawan'
-   */
+  // ============================================================
+  // KARYAWAN CRUD
+  // ============================================================
+
   @Post()
   @Public()
-  @ApiOperation({ summary: 'Create karyawan (candidate)' })
+  @ApiOperation({ summary: 'Create karyawan baru (candidate)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -68,8 +67,6 @@ export class KaryawanController {
       },
     ),
   )
-  // @UseGuards(JwtAuthGuard, PermissionsGuard)
-  // @Permissions('create_karyawan')
   async create(
     @Req() req: any,
     @UploadedFiles()
@@ -81,16 +78,6 @@ export class KaryawanController {
     },
   ) {
     const createKaryawanDto = req.body;
-
-    console.log('📁 Files received:', {
-      pasfoto: files?.pasfoto?.[0]?.originalname,
-      skck: files?.skck?.[0]?.originalname,
-      suratKesehatan: files?.suratKesehatan?.[0]?.originalname,
-      cv: files?.cv?.[0]?.originalname,
-    });
-
-    console.log('📝 Body (DTO):', createKaryawanDto);
-
     const uploadedFiles: string[] = [];
 
     try {
@@ -130,9 +117,8 @@ export class KaryawanController {
   }
 
   @Get()
-  // @UseGuards(JwtAuthGuard, PermissionsGuard)
-  // @Permissions('view_karyawan')
-  @ApiOperation({ summary: 'Get all karyawan' })
+  @RequirePermission('view_karyawan', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua karyawan' })
   async findAll(@Query() filterDto: any) {
     const result = await this.karyawanService.findAll(filterDto);
     return ResponseUtil.successWithMeta(
@@ -142,36 +128,26 @@ export class KaryawanController {
     );
   }
 
-  /**
-   * GET /karyawan/:id
-   * Get karyawan by ID
-   */
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get karyawan by ID' })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('includeUser') includeUser?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user: any,
   ) {
-    if (
-      id !== user.idKaryawan &&
-      !user.permissions.includes('view_all_karyawan')
-    ) {
+    // Boleh lihat data sendiri ATAU punya permission view_karyawan
+    const ownData = id === user.idKaryawan;
+    const hasPermission = user.permissions?.['view_karyawan'] !== undefined;
+
+    if (!ownData && !hasPermission) {
       throw new ForbiddenException('Anda hanya bisa melihat data sendiri');
     }
 
-    const data = await this.karyawanService.findOne(id, includeUser === 'true');
+    const data = await this.karyawanService.findOne(id);
     return ResponseUtil.success(data, 'Data karyawan berhasil diambil');
   }
 
-  /**
-   * PATCH /karyawan/:id
-   * Update karyawan
-   */
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('update_karyawan')
+  @RequirePermission('update_karyawan', PERMISSION.UPDATE)
   @ApiOperation({ summary: 'Update karyawan' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
@@ -198,7 +174,6 @@ export class KaryawanController {
       suratKesehatan?: Express.Multer.File[];
       cv?: Express.Multer.File[];
     },
-    @CurrentUser() user: any,
   ) {
     const updateKaryawanDto = req.body;
     const existing = await this.karyawanService.findOneRaw(id);
@@ -214,7 +189,6 @@ export class KaryawanController {
       const result = await this.cloudinaryService.uploadFile(files.pasfoto[0]);
       updateKaryawanDto.pasfoto = result.secureUrl;
     }
-
     if (files?.skck?.[0]) {
       if (existing.skck) {
         const publicId = this.cloudinaryService.extractPublicId(existing.skck);
@@ -223,7 +197,6 @@ export class KaryawanController {
       const result = await this.cloudinaryService.uploadFile(files.skck[0]);
       updateKaryawanDto.skck = result.secureUrl;
     }
-
     if (files?.suratKesehatan?.[0]) {
       if (existing.suratKesehatan) {
         const publicId = this.cloudinaryService.extractPublicId(
@@ -236,7 +209,6 @@ export class KaryawanController {
       );
       updateKaryawanDto.suratKesehatan = result.secureUrl;
     }
-
     if (files?.cv?.[0]) {
       if (existing.cv) {
         const publicId = this.cloudinaryService.extractPublicId(existing.cv);
@@ -256,27 +228,27 @@ export class KaryawanController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('delete_karyawan')
-  @ApiOperation({ summary: 'Delete karyawan' })
+  @RequirePermission('delete_karyawan', PERMISSION.DELETE)
+  @ApiOperation({ summary: 'Delete karyawan (soft delete)' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.karyawanService.findOneRaw(id);
     const data = await this.karyawanService.remove(id);
     return ResponseUtil.success(data, 'Karyawan berhasil dihapus');
   }
 
+  // ============================================================
+  // STATUS KARYAWAN
+  // ============================================================
+
   @Post(':id/approve')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('approve_candidate')
-  @ApiOperation({ summary: 'Approve candidate' })
+  @RequirePermission('approve_candidate', PERMISSION.CREATE)
+  @ApiOperation({ summary: 'Approve candidate → aktifkan akun' })
   async approveCandidate(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.karyawanService.approveCandidate(id);
     return ResponseUtil.success(data, 'Candidate berhasil di-approve');
   }
 
   @Post(':id/reject')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('reject_candidate')
+  @RequirePermission('reject_candidate', PERMISSION.CREATE)
   @ApiOperation({ summary: 'Reject candidate' })
   async rejectCandidate(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.karyawanService.rejectCandidate(id);
@@ -284,9 +256,8 @@ export class KaryawanController {
   }
 
   @Post(':id/resign')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('resign_karyawan')
-  @ApiOperation({ summary: 'Resign karyawan' })
+  @RequirePermission('resign_karyawan', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Proses resign karyawan' })
   async resignKaryawan(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { tanggalResign?: string },
@@ -298,49 +269,32 @@ export class KaryawanController {
     return ResponseUtil.success(data, 'Karyawan berhasil resign');
   }
 
-  @Post(':id/roles/assign')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_roles')
-  @ApiOperation({ summary: 'Assign custom roles to karyawan' })
-  async assignCustomRole(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { roleIds: number[] },
-  ) {
-    const data = await this.karyawanService.assignCustomRole(id, body.roleIds);
-    return ResponseUtil.success(data, 'Custom role berhasil di-assign');
-  }
+  // ============================================================
+  // PERMISSION OVERRIDE
+  // ============================================================
 
-  @Post(':id/roles/reset')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_roles')
-  @ApiOperation({ summary: 'Reset roles to jabatan default' })
-  async resetToJabatanRole(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.karyawanService.resetToJabatanRole(id);
-    return ResponseUtil.success(data, 'Role berhasil direset');
-  }
-
-  @Post(':id/permissions/add')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_permissions')
-  @ApiOperation({ summary: 'Add permission override to karyawan' })
+  @Post(':id/permissions/grant')
+  @RequirePermission('manage_permission', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Grant permission override ke karyawan' })
   async addPermissionOverride(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { idPermission: number; deskripsi?: string },
+    @Body()
+    body: { idPermission: number; levelAkses: number; deskripsi?: string },
     @CurrentUser() user: any,
   ) {
     const data = await this.karyawanService.addPermissionOverride(
       id,
       body.idPermission,
+      body.levelAkses,
       body.deskripsi,
       user.idKaryawan,
     );
-    return ResponseUtil.success(data, 'Permission berhasil ditambahkan');
+    return ResponseUtil.success(data, 'Permission berhasil di-grant');
   }
 
-  @Post(':id/permissions/remove')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_permissions')
-  @ApiOperation({ summary: 'Remove permission from karyawan' })
+  @Post(':id/permissions/revoke')
+  @RequirePermission('manage_permission', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Revoke permission dari karyawan' })
   async removePermissionOverride(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { idPermission: number; deskripsi?: string },
@@ -352,13 +306,14 @@ export class KaryawanController {
       body.deskripsi,
       user.idKaryawan,
     );
-    return ResponseUtil.success(data, 'Permission berhasil dihapus');
+    return ResponseUtil.success(data, 'Permission berhasil di-revoke');
   }
 
   @Delete(':id/permissions/:permissionId')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_permissions')
-  @ApiOperation({ summary: 'Delete permission override' })
+  @RequirePermission('manage_permission', PERMISSION.DELETE)
+  @ApiOperation({
+    summary: 'Hapus permission override (kembali ke default jabatan)',
+  })
   async deletePermissionOverride(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('permissionId') permissionId: string,
@@ -373,26 +328,23 @@ export class KaryawanController {
   }
 
   @Get(':id/permissions/effective')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get effective permissions for karyawan' })
+  @ApiOperation({ summary: 'Get effective permissions karyawan' })
   async getEffectivePermissions(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.karyawanService.getEffectivePermissions(id);
     return ResponseUtil.success(data, 'Effective permissions berhasil diambil');
   }
 
   @Get(':id/permissions/audit-logs')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('view_permissions')
-  @ApiOperation({ summary: 'Get permission audit logs for karyawan' })
+  @RequirePermission('view_audit_log', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get permission audit logs karyawan' })
   async getPermissionAuditLogs(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.karyawanService.getPermissionAuditLogs(id);
     return ResponseUtil.success(data, 'Audit logs berhasil diambil');
   }
 
   @Get('permissions/audit-logs/all')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @Permissions('manage_permissions')
-  @ApiOperation({ summary: 'Get all permission audit logs' })
+  @RequirePermission('view_audit_log', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua permission audit logs' })
   async getAllPermissionAuditLogs(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,

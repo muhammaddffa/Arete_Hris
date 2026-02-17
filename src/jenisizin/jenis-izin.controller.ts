@@ -9,30 +9,29 @@ import {
   HttpCode,
   HttpStatus,
   Query,
-  // UseGuards,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JenisIzinService } from './jenis-izin.service';
 import { CreateJenisIzinDto, UpdateJenisIzinDto } from './dto/jenis-izin.dto';
 import { createResponse } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-// import { RequirePermissions } from 'src/auth/decorators/permissions.decorator';
-// import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Jenis Izin')
 @Controller('jenis-izin')
-// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class JenisIzinController {
   constructor(private readonly jenisIzinService: JenisIzinService) {}
 
-  // CREATE - Hanya HRD
   @Post()
+  @RequirePermission('manage_izin', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_izin')
-  @ApiOperation({ summary: 'Buat jenis izin (HRD only)' })
+  @ApiOperation({ summary: 'Buat jenis izin baru' })
   async create(@Body() createDto: CreateJenisIzinDto) {
     const data = await this.jenisIzinService.create(createDto);
     return createResponse(
@@ -42,8 +41,8 @@ export class JenisIzinController {
     );
   }
 
-  // GET ALL - Semua yang login (untuk pilih jenis izin saat request)
   @Get()
+  @RequirePermission('manage_izin', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get semua jenis izin' })
   async findAll(
@@ -62,8 +61,8 @@ export class JenisIzinController {
     );
   }
 
-  // GET BY ID - Semua yang login
   @Get(':id')
+  @RequirePermission('manage_izin', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get jenis izin by ID' })
   async findOne(@Param('id') id: string) {
@@ -75,12 +74,10 @@ export class JenisIzinController {
     );
   }
 
-  // UPDATE - Hanya HRD
   @Patch(':id')
+  @RequirePermission('manage_izin', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_izin')
-  @ApiOperation({ summary: 'Update jenis izin (HRD only)' })
+  @ApiOperation({ summary: 'Update jenis izin' })
   async update(@Param('id') id: string, @Body() updateDto: UpdateJenisIzinDto) {
     const data = await this.jenisIzinService.update(id, updateDto);
     return createResponse(
@@ -90,12 +87,10 @@ export class JenisIzinController {
     );
   }
 
-  // DELETE - Hanya HRD
   @Delete(':id')
+  @RequirePermission('manage_izin', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_izin')
-  @ApiOperation({ summary: 'Hapus jenis izin (HRD only)' })
+  @ApiOperation({ summary: 'Hapus jenis izin' })
   async remove(@Param('id') id: string) {
     await this.jenisIzinService.remove(id);
     return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.JENISIZIN.DELETED);

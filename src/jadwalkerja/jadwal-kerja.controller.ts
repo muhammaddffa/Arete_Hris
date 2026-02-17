@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -12,7 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
-  // UseGuards,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JadwalKerjaService } from './jadwal-kerja.service';
@@ -23,22 +20,22 @@ import {
 } from './dto/jadwal-kerja.dto';
 import { createResponse, ResponseUtil } from '../common/utils/response.util';
 import { RESPONSE_MESSAGES } from '../common/constants/response-messages.constant';
-// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-// import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-// import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Jadwal Kerja')
 @Controller('jadwal-kerja')
-// @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class JadwalKerjaController {
   constructor(private readonly jadwalKerjaService: JadwalKerjaService) {}
 
   @Post()
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_jadwal_kerja')
-  @ApiOperation({ summary: 'Buat jadwal kerja (HRD only)' })
+  @ApiOperation({ summary: 'Buat jadwal kerja baru' })
   async create(@Body() createDto: CreateJadwalKerjaDto) {
     const data = await this.jadwalKerjaService.create(createDto);
     return createResponse(
@@ -49,6 +46,7 @@ export class JadwalKerjaController {
   }
 
   @Get()
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get semua jadwal kerja' })
   async findAll(@Query() query: QueryJadwalDto) {
@@ -61,10 +59,9 @@ export class JadwalKerjaController {
   }
 
   @Get('statistics')
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('view_all_karyawan')
-  @ApiOperation({ summary: 'Get statistik jadwal kerja (HRD & Manager)' })
+  @ApiOperation({ summary: 'Get statistik jadwal kerja' })
   async getStatistics() {
     const data = await this.jadwalKerjaService.getStatistics();
     return createResponse(
@@ -74,8 +71,8 @@ export class JadwalKerjaController {
     );
   }
 
-  // GET BY ID - Semua yang login
   @Get(':id')
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get jadwal kerja by ID' })
   async findOne(@Param('id') id: string) {
@@ -87,12 +84,10 @@ export class JadwalKerjaController {
     );
   }
 
-  // UPDATE - Hanya HRD
   @Patch(':id')
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_jadwal_kerja')
-  @ApiOperation({ summary: 'Update jadwal kerja (HRD only)' })
+  @ApiOperation({ summary: 'Update jadwal kerja' })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateJadwalKerjaDto,
@@ -105,12 +100,10 @@ export class JadwalKerjaController {
     );
   }
 
-  // DELETE - Hanya HRD
   @Delete(':id')
+  @RequirePermission('manage_jadwal_kerja', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(PermissionsGuard)
-  // @RequirePermissions('manage_jadwal_kerja')
-  @ApiOperation({ summary: 'Hapus jadwal kerja (HRD only)' })
+  @ApiOperation({ summary: 'Hapus jadwal kerja' })
   async remove(@Param('id') id: string) {
     await this.jadwalKerjaService.remove(id);
     return createResponse(HttpStatus.OK, RESPONSE_MESSAGES.JADWALKERJA.DELETED);

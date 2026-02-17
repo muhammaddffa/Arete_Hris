@@ -18,7 +18,6 @@ export class JabatanService {
   constructor(private prisma: PrismaService) {}
 
   async create(createJabatanDto: CreateJabatanDto) {
-    // Validasi departemen exists
     const departemenExists = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen: createJabatanDto.idDepartemen },
     });
@@ -27,7 +26,6 @@ export class JabatanService {
       throw new BadRequestException(RESPONSE_MESSAGES.DEPARTMENT.NOT_FOUND);
     }
 
-    // Check duplicate nama jabatan dalam departemen yang sama
     const exists = await this.prisma.refJabatan.findFirst({
       where: {
         namaJabatan: createJabatanDto.namaJabatan,
@@ -40,21 +38,27 @@ export class JabatanService {
     }
 
     return this.prisma.refJabatan.create({
-      data: createJabatanDto,
+      data: {
+        namaJabatan: createJabatanDto.namaJabatan,
+        idDepartemen: createJabatanDto.idDepartemen,
+        idAtasan: createJabatanDto.idAtasan,
+        deskripsiJabatan: createJabatanDto.deskripsiJabatan,
+        status: createJabatanDto.status,
+      },
       include: {
         departemen: {
+          select: { idDepartemen: true, namaDepartemen: true, deskripsi: true },
+        },
+        permissions: {
           select: {
-            idDepartemen: true,
-            namaDepartemen: true,
-            deskripsi: true,
+            levelAkses: true,
+            permission: {
+              select: { idPermission: true, namaPermission: true },
+            },
           },
         },
-        roleDefault: {
-          select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
-          },
+        _count: {
+          select: { karyawans: true }, // fix: karyawan → karyawans
         },
       },
     });
@@ -63,23 +67,13 @@ export class JabatanService {
   async findAll(query: QueryJabatanDto) {
     const { search, idDepartemen, status, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
-
     const where: any = {};
 
     if (search) {
-      where.namaJabatan = {
-        contains: search,
-        mode: 'insensitive',
-      };
+      where.namaJabatan = { contains: search, mode: 'insensitive' };
     }
-
-    if (idDepartemen) {
-      where.idDepartemen = idDepartemen;
-    }
-
-    if (status !== undefined) {
-      where.status = status;
-    }
+    if (idDepartemen) where.idDepartemen = idDepartemen;
+    if (status !== undefined) where.status = status;
 
     const [data, total] = await Promise.all([
       this.prisma.refJabatan.findMany({
@@ -94,22 +88,19 @@ export class JabatanService {
               deskripsi: true,
             },
           },
-          roleDefault: {
+          permissions: {
             select: {
-              idRole: true,
-              namaRole: true,
-              level: true,
+              levelAkses: true,
+              permission: {
+                select: { idPermission: true, namaPermission: true },
+              },
             },
           },
           _count: {
-            select: {
-              karyawan: true,
-            },
+            select: { karyawans: true }, // fix: karyawan → karyawans
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       }),
       this.prisma.refJabatan.count({ where }),
     ]);
@@ -134,23 +125,18 @@ export class JabatanService {
       where: { idJabatan: id },
       include: {
         departemen: {
-          select: {
-            idDepartemen: true,
-            namaDepartemen: true,
-            deskripsi: true,
-          },
+          select: { idDepartemen: true, namaDepartemen: true, deskripsi: true },
         },
-        roleDefault: {
+        permissions: {
           select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
+            levelAkses: true,
+            permission: {
+              select: { idPermission: true, namaPermission: true },
+            },
           },
         },
         _count: {
-          select: {
-            karyawan: true,
-          },
+          select: { karyawans: true }, // fix: karyawan → karyawans
         },
       },
     });
@@ -163,10 +149,8 @@ export class JabatanService {
   }
 
   async update(id: string, updateJabatanDto: UpdateJabatanDto) {
-    // Check if jabatan exists
     await this.findOne(id);
 
-    // Validasi departemen jika diupdate
     if (updateJabatanDto.idDepartemen) {
       const departemenExists = await this.prisma.refDepartemen.findUnique({
         where: { idDepartemen: updateJabatanDto.idDepartemen },
@@ -177,7 +161,6 @@ export class JabatanService {
       }
     }
 
-    // Check duplicate nama jabatan
     if (updateJabatanDto.namaJabatan) {
       const exists = await this.prisma.refJabatan.findFirst({
         where: {
@@ -194,31 +177,35 @@ export class JabatanService {
 
     return this.prisma.refJabatan.update({
       where: { idJabatan: id },
-      data: updateJabatanDto,
+      data: {
+        namaJabatan: updateJabatanDto.namaJabatan,
+        idDepartemen: updateJabatanDto.idDepartemen,
+        idAtasan: updateJabatanDto.idAtasan,
+        deskripsiJabatan: updateJabatanDto.deskripsiJabatan,
+        status: updateJabatanDto.status,
+      },
       include: {
         departemen: {
+          select: { idDepartemen: true, namaDepartemen: true, deskripsi: true },
+        },
+        permissions: {
           select: {
-            idDepartemen: true,
-            namaDepartemen: true,
-            deskripsi: true,
+            levelAkses: true,
+            permission: {
+              select: { idPermission: true, namaPermission: true },
+            },
           },
         },
-        roleDefault: {
-          select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
-          },
+        _count: {
+          select: { karyawans: true }, // fix: karyawan → karyawans
         },
       },
     });
   }
 
   async remove(id: string) {
-    // Check if jabatan exists
     await this.findOne(id);
 
-    // Check if jabatan has karyawan
     const karyawanCount = await this.prisma.refKaryawan.count({
       where: { idJabatan: id },
     });
@@ -239,10 +226,7 @@ export class JabatanService {
 
     const [karyawanAktif, karyawanTotal] = await Promise.all([
       this.prisma.refKaryawan.count({
-        where: {
-          idJabatan: id,
-          statusKeaktifan: true,
-        },
+        where: { idJabatan: id, statusKeaktifan: true },
       }),
       this.prisma.refKaryawan.count({
         where: { idJabatan: id },
@@ -260,7 +244,6 @@ export class JabatanService {
   }
 
   async getByDepartemen(idDepartemen: string) {
-    // Validasi departemen exists
     const departemenExists = await this.prisma.refDepartemen.findUnique({
       where: { idDepartemen },
     });
@@ -270,33 +253,24 @@ export class JabatanService {
     }
 
     return this.prisma.refJabatan.findMany({
-      where: {
-        idDepartemen,
-        status: true,
-      },
+      where: { idDepartemen, status: true },
       include: {
         departemen: {
-          select: {
-            idDepartemen: true,
-            namaDepartemen: true,
-          },
+          select: { idDepartemen: true, namaDepartemen: true },
         },
-        roleDefault: {
+        permissions: {
           select: {
-            idRole: true,
-            namaRole: true,
-            level: true,
+            levelAkses: true,
+            permission: {
+              select: { idPermission: true, namaPermission: true },
+            },
           },
         },
         _count: {
-          select: {
-            karyawan: true,
-          },
+          select: { karyawans: true }, // fix: karyawan → karyawans
         },
       },
-      orderBy: {
-        namaJabatan: 'asc',
-      },
+      orderBy: { namaJabatan: 'asc' },
     });
   }
 }

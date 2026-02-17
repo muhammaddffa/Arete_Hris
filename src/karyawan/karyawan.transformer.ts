@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { ConfigService } from '@nestjs/config';
@@ -59,14 +60,12 @@ export class KaryawanTransformer {
         : null,
 
       // User info if exists
-      user: karyawan.user
-        ? {
-            idUser: karyawan.user.idUser,
-            username: karyawan.user.username,
-            email: karyawan.user.email,
-            isActive: karyawan.user.isActive,
-          }
-        : null,
+      auth: {
+        username: karyawan.username ?? null,
+        isActive: karyawan.isActive ?? null,
+        lastLogin: karyawan.lastLogin ?? null,
+        mustChangePassword: karyawan.mustChangePassword ?? null,
+      },
     };
   }
 

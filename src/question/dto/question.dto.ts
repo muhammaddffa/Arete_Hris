@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { z } from 'zod';
 
 export const QUESTION_TYPES = [

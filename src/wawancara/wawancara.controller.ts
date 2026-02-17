@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +20,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { WawancaraService } from './wawancara.service';
 import {
@@ -41,22 +43,23 @@ import {
   StatusWawancara,
   JenisWawancara,
 } from '../model/blacklist-wawancara.model';
-// import { Public } from 'src/auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Wawancara')
 @Controller('wawancara')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WawancaraController {
   constructor(private readonly wawancaraService: WawancaraService) {}
 
   @Post()
+  @RequirePermission('manage_wawancara', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Schedule interview (HRD or User)' })
-  @ApiResponse({
-    status: 201,
-    description: 'Interview scheduled successfully',
-    type: WawancaraResponseDto,
-  })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiOperation({ summary: 'Jadwalkan wawancara baru' })
+  @ApiResponse({ status: 201, type: WawancaraResponseDto })
   @ApiResponse({ status: 409, description: 'Schedule conflict' })
   async create(
     @Body(new ZodValidationPipe(CreateWawancaraSchema))
@@ -67,7 +70,8 @@ export class WawancaraController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all interviews with filters and pagination' })
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua wawancara dengan filter' })
   @ApiQuery({ name: 'status', required: false, enum: StatusWawancara })
   @ApiQuery({ name: 'jenisWawancara', required: false, enum: JenisWawancara })
   @ApiQuery({ name: 'idPewawancara', required: false, type: String })
@@ -83,11 +87,7 @@ export class WawancaraController {
     enum: ['tanggalWawancara', 'createdAt'],
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
-  @ApiResponse({
-    status: 200,
-    description: 'List of interviews',
-    type: PaginatedWawancaraResponseDto,
-  })
+  @ApiResponse({ status: 200, type: PaginatedWawancaraResponseDto })
   async findAll(
     @Query(new ZodValidationPipe(FilterWawancaraSchema))
     filterDto: FilterWawancaraDto,
@@ -100,32 +100,28 @@ export class WawancaraController {
     );
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get interview by ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'Wawancara ID (UUID)',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview found',
-    type: WawancaraResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Interview not found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.wawancaraService.findOne(id);
-    return ResponseUtil.success(data, 'Data wawancara berhasil diambil');
+  @Get('stats/summary')
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik wawancara' })
+  async getStats() {
+    const data = await this.wawancaraService.getStats();
+    return ResponseUtil.success(data, 'Statistik wawancara berhasil diambil');
+  }
+
+  @Get('upcoming/list')
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get wawancara yang akan datang' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  async getUpcoming(@Query('limit') limit?: number) {
+    const data = await this.wawancaraService.getUpcoming(limit);
+    return ResponseUtil.success(data, 'Wawancara mendatang berhasil diambil');
   }
 
   @Get('pewawancara/:idPewawancara')
-  @ApiOperation({ summary: 'Get interviews by interviewer' })
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get wawancara by pewawancara' })
   @ApiParam({ name: 'idPewawancara', type: String })
   @ApiQuery({ name: 'status', required: false, enum: StatusWawancara })
-  @ApiResponse({
-    status: 200,
-    description: 'List of interviews by interviewer',
-  })
   async getByPewawancara(
     @Param('idPewawancara', ParseUUIDPipe) idPewawancara: string,
     @Query('status') status?: StatusWawancara,
@@ -141,12 +137,9 @@ export class WawancaraController {
   }
 
   @Get('peserta/:idPeserta')
-  @ApiOperation({ summary: 'Get interviews by candidate' })
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get wawancara by peserta' })
   @ApiParam({ name: 'idPeserta', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'List of interviews by candidate',
-  })
   async getByPeserta(@Param('idPeserta', ParseUUIDPipe) idPeserta: string) {
     const data = await this.wawancaraService.getByPeserta(idPeserta);
     return ResponseUtil.success(
@@ -155,27 +148,22 @@ export class WawancaraController {
     );
   }
 
-  @Get('upcoming/list')
-  @ApiOperation({ summary: 'Get upcoming scheduled interviews' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiResponse({
-    status: 200,
-    description: 'List of upcoming interviews',
-  })
-  async getUpcoming(@Query('limit') limit?: number) {
-    const data = await this.wawancaraService.getUpcoming(limit);
-    return ResponseUtil.success(data, 'Wawancara mendatang berhasil diambil');
+  @Get(':id')
+  @RequirePermission('manage_wawancara', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get wawancara by ID' })
+  @ApiParam({ name: 'id', description: 'Wawancara ID (UUID)' })
+  @ApiResponse({ status: 200, type: WawancaraResponseDto })
+  @ApiResponse({ status: 404, description: 'Wawancara tidak ditemukan' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.wawancaraService.findOne(id);
+    return ResponseUtil.success(data, 'Data wawancara berhasil diambil');
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update interview' })
+  @RequirePermission('manage_wawancara', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Update wawancara' })
   @ApiParam({ name: 'id', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview updated',
-    type: WawancaraResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Interview not found' })
+  @ApiResponse({ status: 200, type: WawancaraResponseDto })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(UpdateWawancaraSchema))
@@ -186,13 +174,10 @@ export class WawancaraController {
   }
 
   @Post(':id/complete')
-  @ApiOperation({ summary: 'Complete interview with result' })
+  @RequirePermission('manage_wawancara', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Selesaikan wawancara dengan hasil' })
   @ApiParam({ name: 'id', type: String })
   @ApiBody({ type: CompleteWawancaraDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview completed',
-  })
   async complete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(CompleteWawancaraSchema))
@@ -203,7 +188,8 @@ export class WawancaraController {
   }
 
   @Post(':id/cancel')
-  @ApiOperation({ summary: 'Cancel interview' })
+  @RequirePermission('manage_wawancara', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Batalkan wawancara' })
   @ApiParam({ name: 'id', type: String })
   @ApiBody({
     schema: {
@@ -212,10 +198,6 @@ export class WawancaraController {
         alasan: { type: 'string', example: 'Candidate tidak bisa hadir' },
       },
     },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview cancelled',
   })
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
@@ -226,7 +208,8 @@ export class WawancaraController {
   }
 
   @Post(':id/reschedule')
-  @ApiOperation({ summary: 'Reschedule interview' })
+  @RequirePermission('manage_wawancara', PERMISSION.UPDATE)
+  @ApiOperation({ summary: 'Jadwalkan ulang wawancara' })
   @ApiParam({ name: 'id', type: String })
   @ApiBody({
     schema: {
@@ -238,10 +221,6 @@ export class WawancaraController {
         alasan: { type: 'string', example: 'Permintaan candidate' },
       },
     },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview rescheduled',
   })
   async reschedule(
     @Param('id', ParseUUIDPipe) id: string,
@@ -259,35 +238,12 @@ export class WawancaraController {
   }
 
   @Delete(':id')
+  @RequirePermission('manage_wawancara', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete interview' })
+  @ApiOperation({ summary: 'Hapus wawancara' })
   @ApiParam({ name: 'id', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview deleted',
-  })
-  @ApiResponse({ status: 404, description: 'Interview not found' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.wawancaraService.remove(id);
     return ResponseUtil.success(data, 'Data wawancara berhasil dihapus');
-  }
-
-  @Get('stats/summary')
-  @ApiOperation({ summary: 'Get interview statistics' })
-  @ApiResponse({
-    status: 200,
-    description: 'Interview statistics',
-    schema: {
-      type: 'object',
-      properties: {
-        total: { type: 'number' },
-        byStatus: { type: 'object' },
-        byJenis: { type: 'object' },
-      },
-    },
-  })
-  async getStats() {
-    const data = await this.wawancaraService.getStats();
-    return ResponseUtil.success(data, 'Statistik wawancara berhasil diambil');
   }
 }

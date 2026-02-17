@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -13,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +18,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { BlacklistService } from './blacklist.service';
 import {
@@ -36,24 +35,23 @@ import {
   UpdateBlacklistSchema,
   FilterBlacklistSchema,
 } from './blacklist.validation';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermission } from '../auth/decorators/permissions.decorator';
+import { PERMISSION } from '../common/constants/permission.constant';
 
 @ApiTags('Blacklist')
 @Controller('blacklist')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BlacklistController {
   constructor(private readonly blacklistService: BlacklistService) {}
 
-  // ============================================
-  // CREATE BLACKLIST
-  // ============================================
   @Post()
+  @RequirePermission('manage_blacklist', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Add karyawan to blacklist' })
-  @ApiResponse({
-    status: 201,
-    description: 'Karyawan berhasil ditambahkan ke blacklist',
-    type: BlacklistResponseDto,
-  })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiOperation({ summary: 'Tambah karyawan ke blacklist' })
+  @ApiResponse({ status: 201, type: BlacklistResponseDto })
   @ApiResponse({ status: 409, description: 'Karyawan sudah di blacklist' })
   async create(
     @Body(new ZodValidationPipe(CreateBlacklistSchema))
@@ -66,11 +64,9 @@ export class BlacklistController {
     );
   }
 
-  // ============================================
-  // GET ALL BLACKLIST
-  // ============================================
   @Get()
-  @ApiOperation({ summary: 'Get all blacklisted employees with pagination' })
+  @RequirePermission('manage_blacklist', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get semua blacklist dengan pagination' })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
@@ -81,11 +77,7 @@ export class BlacklistController {
   })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   @ApiQuery({ name: 'includeRelations', required: false, type: Boolean })
-  @ApiResponse({
-    status: 200,
-    description: 'List of blacklisted employees',
-    type: PaginatedBlacklistResponseDto,
-  })
+  @ApiResponse({ status: 200, type: PaginatedBlacklistResponseDto })
   async findAll(
     @Query(new ZodValidationPipe(FilterBlacklistSchema))
     filterDto: FilterBlacklistDto,
@@ -98,46 +90,18 @@ export class BlacklistController {
     );
   }
 
-  // ============================================
-  // GET BLACKLIST BY ID
-  // ============================================
-  @Get(':id')
-  @ApiOperation({ summary: 'Get blacklist by ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'Blacklist ID (UUID)',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Blacklist found',
-    type: BlacklistResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Blacklist not found' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.blacklistService.findOne(id);
-    return ResponseUtil.success(data, 'Data blacklist berhasil diambil');
+  @Get('stats/summary')
+  @RequirePermission('manage_blacklist', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get statistik blacklist' })
+  async getStats() {
+    const data = await this.blacklistService.getStats();
+    return ResponseUtil.success(data, 'Statistik blacklist berhasil diambil');
   }
 
-  // ============================================
-  // CHECK IF KARYAWAN IS BLACKLISTED
-  // ============================================
   @Get('check/:idKaryawan')
-  @ApiOperation({ summary: 'Check if karyawan is blacklisted' })
-  @ApiParam({
-    name: 'idKaryawan',
-    description: 'Karyawan ID (UUID)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Blacklist check result',
-    schema: {
-      type: 'object',
-      properties: {
-        isBlacklisted: { type: 'boolean' },
-      },
-    },
-  })
+  @RequirePermission('manage_blacklist', PERMISSION.READ)
+  @ApiOperation({ summary: 'Cek apakah karyawan di blacklist' })
+  @ApiParam({ name: 'idKaryawan', description: 'Karyawan ID (UUID)' })
   async checkBlacklist(@Param('idKaryawan', ParseUUIDPipe) idKaryawan: string) {
     const isBlacklisted = await this.blacklistService.isBlacklisted(idKaryawan);
     return ResponseUtil.success(
@@ -148,20 +112,10 @@ export class BlacklistController {
     );
   }
 
-  // ============================================
-  // CHECK BY NIK
-  // ============================================
   @Get('check-nik/:nik')
-  @ApiOperation({ summary: 'Check if NIK is blacklisted' })
-  @ApiParam({
-    name: 'nik',
-    description: 'NIK',
-    example: '3201012345678901',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'NIK check result',
-  })
+  @RequirePermission('manage_blacklist', PERMISSION.READ)
+  @ApiOperation({ summary: 'Cek apakah NIK di blacklist' })
+  @ApiParam({ name: 'nik', example: '3201012345678901' })
   async checkByNik(@Param('nik') nik: string) {
     const isBlacklisted = await this.blacklistService.checkByNik(nik);
     return ResponseUtil.success(
@@ -170,21 +124,23 @@ export class BlacklistController {
     );
   }
 
-  // ============================================
-  // UPDATE BLACKLIST
-  // ============================================
+  @Get(':id')
+  @RequirePermission('manage_blacklist', PERMISSION.READ)
+  @ApiOperation({ summary: 'Get blacklist by ID' })
+  @ApiParam({ name: 'id', description: 'Blacklist ID (UUID)' })
+  @ApiResponse({ status: 200, type: BlacklistResponseDto })
+  @ApiResponse({ status: 404, description: 'Blacklist tidak ditemukan' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.blacklistService.findOne(id);
+    return ResponseUtil.success(data, 'Data blacklist berhasil diambil');
+  }
+
   @Patch(':id')
+  @RequirePermission('manage_blacklist', PERMISSION.UPDATE)
   @ApiOperation({ summary: 'Update blacklist entry' })
-  @ApiParam({
-    name: 'id',
-    description: 'Blacklist ID (UUID)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Blacklist updated',
-    type: BlacklistResponseDto,
-  })
-  @ApiResponse({ status: 404, description: 'Blacklist not found' })
+  @ApiParam({ name: 'id', description: 'Blacklist ID (UUID)' })
+  @ApiResponse({ status: 200, type: BlacklistResponseDto })
+  @ApiResponse({ status: 404, description: 'Blacklist tidak ditemukan' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(UpdateBlacklistSchema))
@@ -194,37 +150,14 @@ export class BlacklistController {
     return ResponseUtil.success(data, 'Data blacklist berhasil diupdate');
   }
 
-  // ============================================
-  // DELETE BLACKLIST
-  // ============================================
   @Delete(':id')
+  @RequirePermission('manage_blacklist', PERMISSION.DELETE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Remove from blacklist' })
-  @ApiParam({
-    name: 'id',
-    description: 'Blacklist ID (UUID)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Removed from blacklist',
-  })
-  @ApiResponse({ status: 404, description: 'Blacklist not found' })
+  @ApiOperation({ summary: 'Hapus dari blacklist' })
+  @ApiParam({ name: 'id', description: 'Blacklist ID (UUID)' })
+  @ApiResponse({ status: 404, description: 'Blacklist tidak ditemukan' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.blacklistService.remove(id);
     return ResponseUtil.success(data, 'Berhasil dihapus dari blacklist');
-  }
-
-  // ============================================
-  // GET STATS
-  // ============================================
-  @Get('stats/summary')
-  @ApiOperation({ summary: 'Get blacklist statistics' })
-  @ApiResponse({
-    status: 200,
-    description: 'Blacklist statistics',
-  })
-  async getStats() {
-    const data = await this.blacklistService.getStats();
-    return ResponseUtil.success(data, 'Statistik blacklist berhasil diambil');
   }
 }

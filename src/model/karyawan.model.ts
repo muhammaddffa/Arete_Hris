@@ -1,3 +1,5 @@
+// src/model/karyawan.model.ts
+
 export enum StatusKaryawan {
   AKTIF = 'aktif',
   REJECTED = 'rejected',
@@ -6,8 +8,8 @@ export enum StatusKaryawan {
 }
 
 export enum JenisKelamin {
-  L = 'L', // Laki-laki
-  P = 'P', // Perempuan
+  L = 'L',
+  P = 'P',
 }
 
 export enum StatusPernikahan {
@@ -40,6 +42,13 @@ export interface Karyawan {
   tanggalMasuk: Date;
   tanggalResign?: Date | null;
   status: StatusKaryawan;
+
+  // Auth fields (langsung di refKaryawan, tidak ada tabel users)
+  username?: string | null;
+  isActive: boolean;
+  lastLogin?: Date | null;
+  mustChangePassword: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,15 +60,21 @@ export interface KaryawanWithRelations extends Karyawan {
     departemen: {
       idDepartemen: string;
       namaDepartemen: string;
-      roleDefault: {
-        namaRole: string;
-      };
+      // roleDefault dihapus — tidak ada lagi refrole
     };
     atasan?: {
       idKaryawan: string;
       nama: string;
       pasfoto?: string | null;
     } | null;
+    // Permission dari jabatan (bitmask)
+    permissions?: {
+      levelAkses: number;
+      permission: {
+        idPermission: number;
+        namaPermission: string;
+      };
+    }[];
   };
 }
 
@@ -69,7 +84,7 @@ export interface KaryawanFilterParams {
   idDepartemen?: string;
   idJabatan?: string;
   jenisKelamin?: JenisKelamin;
-  search?: string; // Search by nama, nik, email
+  search?: string;
   page?: number;
   limit?: number;
   sortBy?: 'nama' | 'tanggalMasuk' | 'createdAt';
