@@ -10,6 +10,7 @@ const P = {
   CREATE: 2, // 0010
   UPDATE: 4, // 0100
   DELETE: 8, // 1000
+  READ_CREATE: 1 | 2, // 3  — read + create
   READ_WRITE: 1 | 2 | 4, // 7  — read + create + update
   FULL: 1 | 2 | 4 | 8, // 15 — semua akses
 } as const;
@@ -61,28 +62,28 @@ async function assignJabatanPermissions(
 }
 
 export async function seedJabatanPermissions() {
-  console.log('🔐 Seeding Jabatan Permissions...\n');
+  console.log('🔐 Seeding Jabatan Permissions (Refactored)...\n');
 
   // ============================================================
   // Permission sets yang sering dipakai (reusable)
   // ============================================================
 
-  // Semua karyawan: lihat data sendiri + ajukan izin/lembur
+  // Semua karyawan: lihat profil sendiri + presensi + ajukan izin/lembur
   const basic = [
-    { namaPermission: 'view_karyawan', levelAkses: P.READ },
-    { namaPermission: 'view_presensi', levelAkses: P.READ },
-    { namaPermission: 'create_pengajuan_izin', levelAkses: P.CREATE },
-    { namaPermission: 'view_pengajuan_izin', levelAkses: P.READ },
-    { namaPermission: 'create_pengajuan_lembur', levelAkses: P.CREATE },
-    { namaPermission: 'view_pengajuan_lembur', levelAkses: P.READ },
+    { namaPermission: 'manage_karyawan', levelAkses: P.READ }, // read daftar karyawan
+    { namaPermission: 'own_profile', levelAkses: P.READ_CREATE }, // update profil sendiri
+    { namaPermission: 'own_presensi', levelAkses: P.READ_CREATE }, // clock in/out
+    { namaPermission: 'submit_izin', levelAkses: P.READ_CREATE }, // ajukan izin
+    { namaPermission: 'submit_lembur', levelAkses: P.READ_CREATE }, // ajukan lembur
+    { namaPermission: 'answer_form', levelAkses: P.READ_CREATE }, // isi form/survey
   ];
 
   // Manager/supervisor: approval + view semua + report
   const approval = [
     { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-    { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
-    { namaPermission: 'approve_izin', levelAkses: P.CREATE },
-    { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+    { namaPermission: 'view_all_izin', levelAkses: P.READ },
+    { namaPermission: 'approve_izin', levelAkses: P.CREATE }, // approve = CREATE action
+    { namaPermission: 'view_all_lembur', levelAkses: P.READ },
     { namaPermission: 'approve_lembur', levelAkses: P.CREATE },
     { namaPermission: 'view_reports', levelAkses: P.READ },
   ];
@@ -104,9 +105,7 @@ export async function seedJabatanPermissions() {
 
   await assignJabatanPermissions('HR Manager', dept('Human Resource'), [
     ...basic,
-    { namaPermission: 'create_karyawan', levelAkses: P.CREATE },
-    { namaPermission: 'update_karyawan', levelAkses: P.UPDATE },
-    { namaPermission: 'delete_karyawan', levelAkses: P.DELETE },
+    { namaPermission: 'manage_karyawan', levelAkses: P.FULL }, // CRUD karyawan
     { namaPermission: 'approve_candidate', levelAkses: P.CREATE },
     { namaPermission: 'reject_candidate', levelAkses: P.CREATE },
     { namaPermission: 'resign_karyawan', levelAkses: P.CREATE },
@@ -114,40 +113,44 @@ export async function seedJabatanPermissions() {
     { namaPermission: 'toggle_user_status', levelAkses: P.CREATE },
     { namaPermission: 'manage_permission', levelAkses: P.READ_WRITE },
     { namaPermission: 'view_audit_log', levelAkses: P.READ },
-    { namaPermission: 'manage_department', levelAkses: P.READ_WRITE },
-    { namaPermission: 'manage_jabatan', levelAkses: P.READ_WRITE },
+    { namaPermission: 'manage_department', levelAkses: P.FULL },
+    { namaPermission: 'manage_jabatan', levelAkses: P.FULL },
     { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-    { namaPermission: 'manage_presensi', levelAkses: P.READ_WRITE },
-    { namaPermission: 'manage_jadwal_kerja', levelAkses: P.READ_WRITE },
+    { namaPermission: 'manage_presensi', levelAkses: P.FULL },
+    { namaPermission: 'manage_jadwal_kerja', levelAkses: P.FULL },
     { namaPermission: 'assign_jadwal', levelAkses: P.CREATE },
-    { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
+    { namaPermission: 'view_all_izin', levelAkses: P.READ },
     { namaPermission: 'approve_izin', levelAkses: P.CREATE },
-    { namaPermission: 'manage_jenis_izin', levelAkses: P.READ_WRITE },
-    { namaPermission: 'manage_saldo_cuti', levelAkses: P.READ_WRITE },
-    { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+    { namaPermission: 'manage_izin', levelAkses: P.FULL },
+    { namaPermission: 'manage_jenis_izin', levelAkses: P.FULL },
+    { namaPermission: 'manage_saldo_cuti', levelAkses: P.FULL },
+    { namaPermission: 'view_all_lembur', levelAkses: P.READ },
     { namaPermission: 'approve_lembur', levelAkses: P.CREATE },
-    { namaPermission: 'manage_wawancara', levelAkses: P.READ_WRITE },
+    { namaPermission: 'manage_lembur', levelAkses: P.FULL },
+    { namaPermission: 'manage_wawancara', levelAkses: P.FULL },
     { namaPermission: 'conduct_wawancara', levelAkses: P.CREATE },
-    { namaPermission: 'manage_blacklist', levelAkses: P.READ_WRITE },
+    { namaPermission: 'manage_blacklist', levelAkses: P.FULL },
+    { namaPermission: 'view_form_responses', levelAkses: P.READ },
+    { namaPermission: 'manage_form', levelAkses: P.FULL },
     { namaPermission: 'view_reports', levelAkses: P.READ },
     { namaPermission: 'export_data', levelAkses: P.READ },
   ]);
 
   await assignJabatanPermissions('HR Specialist', dept('Human Resource'), [
     ...basic,
-    { namaPermission: 'create_karyawan', levelAkses: P.CREATE },
-    { namaPermission: 'update_karyawan', levelAkses: P.UPDATE },
+    { namaPermission: 'manage_karyawan', levelAkses: P.READ_WRITE }, // CRU, no delete
     { namaPermission: 'approve_candidate', levelAkses: P.CREATE },
     { namaPermission: 'reject_candidate', levelAkses: P.CREATE },
     { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-    { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
+    { namaPermission: 'view_all_izin', levelAkses: P.READ },
     { namaPermission: 'approve_izin', levelAkses: P.CREATE },
     { namaPermission: 'manage_jenis_izin', levelAkses: P.READ_WRITE },
     { namaPermission: 'manage_saldo_cuti', levelAkses: P.READ_WRITE },
-    { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+    { namaPermission: 'view_all_lembur', levelAkses: P.READ },
     { namaPermission: 'approve_lembur', levelAkses: P.CREATE },
     { namaPermission: 'manage_wawancara', levelAkses: P.READ_WRITE },
     { namaPermission: 'conduct_wawancara', levelAkses: P.CREATE },
+    { namaPermission: 'view_form_responses', levelAkses: P.READ },
     { namaPermission: 'view_reports', levelAkses: P.READ },
   ]);
 
@@ -166,6 +169,7 @@ export async function seedJabatanPermissions() {
     { namaPermission: 'reset_password', levelAkses: P.CREATE },
     { namaPermission: 'toggle_user_status', levelAkses: P.CREATE },
     { namaPermission: 'view_audit_log', levelAkses: P.READ },
+    { namaPermission: 'export_data', levelAkses: P.READ },
   ]);
 
   await assignJabatanPermissions(
@@ -174,8 +178,8 @@ export async function seedJabatanPermissions() {
     [
       ...basic,
       { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-      { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
-      { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+      { namaPermission: 'view_all_izin', levelAkses: P.READ },
+      { namaPermission: 'view_all_lembur', levelAkses: P.READ },
       { namaPermission: 'view_reports', levelAkses: P.READ },
       { namaPermission: 'reset_password', levelAkses: P.CREATE },
       { namaPermission: 'view_audit_log', levelAkses: P.READ },
@@ -200,8 +204,8 @@ export async function seedJabatanPermissions() {
   await assignJabatanPermissions('Accountant', dept('Finance & Accounting'), [
     ...basic,
     { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-    { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
-    { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+    { namaPermission: 'view_all_izin', levelAkses: P.READ },
+    { namaPermission: 'view_all_lembur', levelAkses: P.READ },
     { namaPermission: 'view_reports', levelAkses: P.READ },
     { namaPermission: 'export_data', levelAkses: P.READ },
   ]);
@@ -212,8 +216,8 @@ export async function seedJabatanPermissions() {
     [
       ...basic,
       { namaPermission: 'view_all_presensi', levelAkses: P.READ },
-      { namaPermission: 'view_all_pengajuan_izin', levelAkses: P.READ },
-      { namaPermission: 'view_all_pengajuan_lembur', levelAkses: P.READ },
+      { namaPermission: 'view_all_izin', levelAkses: P.READ },
+      { namaPermission: 'view_all_lembur', levelAkses: P.READ },
       { namaPermission: 'export_data', levelAkses: P.READ },
     ],
   );
