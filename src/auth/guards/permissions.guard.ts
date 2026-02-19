@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 // src/auth/guards/permissions.guard.ts
-
 import {
   Injectable,
   CanActivate,
@@ -30,6 +29,11 @@ export class PermissionsGuard implements CanActivate {
     if (!required) return true;
 
     const { user } = context.switchToHttp().getRequest();
+
+    console.log('=== PERMISSION CHECK ===');
+    console.log('Required:', required);
+    console.log('User:', user ? 'ada' : 'UNDEFINED - inilah masalahnya');
+    console.log('User permissions:', user?.permissions);
 
     if (!user?.permissions) {
       throw new ForbiddenException('Tidak memiliki permission');
