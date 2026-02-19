@@ -105,162 +105,442 @@ export async function seedLogisticsDepartments() {
   const jabatan = await prisma.$transaction([
     // Human Resource
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'HR Manager', idDepartemen: getDept('Human Resource') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'HR Manager',
+          idDepartemen: getDept('Human Resource'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'HR Manager', idDepartemen: getDept('Human Resource'), deskripsiJabatan: 'Lead HR operations and team', status: true },
+      create: {
+        namaJabatan: 'HR Manager',
+        idDepartemen: getDept('Human Resource'),
+        deskripsiJabatan: 'Lead HR operations and team',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'HR Specialist', idDepartemen: getDept('Human Resource') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'HR Specialist',
+          idDepartemen: getDept('Human Resource'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'HR Specialist', idDepartemen: getDept('Human Resource'), deskripsiJabatan: 'Handle recruitment and employee relations', status: true },
+      create: {
+        namaJabatan: 'HR Specialist',
+        idDepartemen: getDept('Human Resource'),
+        deskripsiJabatan: 'Handle recruitment and employee relations',
+        status: true,
+      },
     }),
 
     // Information Technology
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'IT Manager', idDepartemen: getDept('Information Technology') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'IT Manager',
+          idDepartemen: getDept('Information Technology'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'IT Manager', idDepartemen: getDept('Information Technology'), deskripsiJabatan: 'Manage IT infrastructure and system development', status: true },
+      create: {
+        namaJabatan: 'IT Manager',
+        idDepartemen: getDept('Information Technology'),
+        deskripsiJabatan: 'Manage IT infrastructure and system development',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'System Administrator', idDepartemen: getDept('Information Technology') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'System Administrator',
+          idDepartemen: getDept('Information Technology'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'System Administrator', idDepartemen: getDept('Information Technology'), deskripsiJabatan: 'Maintain servers, networks, and IT systems', status: true },
+      create: {
+        namaJabatan: 'System Administrator',
+        idDepartemen: getDept('Information Technology'),
+        deskripsiJabatan: 'Maintain servers, networks, and IT systems',
+        status: true,
+      },
     }),
 
     // Finance & Accounting
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Finance Manager', idDepartemen: getDept('Finance & Accounting') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Finance Manager',
+          idDepartemen: getDept('Finance & Accounting'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Finance Manager', idDepartemen: getDept('Finance & Accounting'), deskripsiJabatan: 'Lead financial planning and accounting operations', status: true },
+      create: {
+        namaJabatan: 'Finance Manager',
+        idDepartemen: getDept('Finance & Accounting'),
+        deskripsiJabatan: 'Lead financial planning and accounting operations',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Accountant', idDepartemen: getDept('Finance & Accounting') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Accountant',
+          idDepartemen: getDept('Finance & Accounting'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Accountant', idDepartemen: getDept('Finance & Accounting'), deskripsiJabatan: 'Handle bookkeeping and financial reporting', status: true },
+      create: {
+        namaJabatan: 'Accountant',
+        idDepartemen: getDept('Finance & Accounting'),
+        deskripsiJabatan: 'Handle bookkeeping and financial reporting',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Payroll Staff', idDepartemen: getDept('Finance & Accounting') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Payroll Staff',
+          idDepartemen: getDept('Finance & Accounting'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Payroll Staff', idDepartemen: getDept('Finance & Accounting'), deskripsiJabatan: 'Process employee payroll and benefits', status: true },
+      create: {
+        namaJabatan: 'Payroll Staff',
+        idDepartemen: getDept('Finance & Accounting'),
+        deskripsiJabatan: 'Process employee payroll and benefits',
+        status: true,
+      },
     }),
 
     // Operations
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Operations Director', idDepartemen: getDept('Operations') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Operations Director',
+          idDepartemen: getDept('Operations'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Operations Director', idDepartemen: getDept('Operations'), deskripsiJabatan: 'Oversee all logistics operations', status: true },
+      create: {
+        namaJabatan: 'Operations Director',
+        idDepartemen: getDept('Operations'),
+        deskripsiJabatan: 'Oversee all logistics operations',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Operations Manager', idDepartemen: getDept('Operations') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Operations Manager',
+          idDepartemen: getDept('Operations'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Operations Manager', idDepartemen: getDept('Operations'), deskripsiJabatan: 'Manage daily logistics operations', status: true },
+      create: {
+        namaJabatan: 'Operations Manager',
+        idDepartemen: getDept('Operations'),
+        deskripsiJabatan: 'Manage daily logistics operations',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Operations Coordinator', idDepartemen: getDept('Operations') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Operations Coordinator',
+          idDepartemen: getDept('Operations'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Operations Coordinator', idDepartemen: getDept('Operations'), deskripsiJabatan: 'Coordinate between departments', status: true },
+      create: {
+        namaJabatan: 'Operations Coordinator',
+        idDepartemen: getDept('Operations'),
+        deskripsiJabatan: 'Coordinate between departments',
+        status: true,
+      },
     }),
 
     // Warehouse
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Warehouse Manager', idDepartemen: getDept('Warehouse') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Warehouse Manager',
+          idDepartemen: getDept('Warehouse'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Warehouse Manager', idDepartemen: getDept('Warehouse'), deskripsiJabatan: 'Manage warehouse operations and inventory', status: true },
+      create: {
+        namaJabatan: 'Warehouse Manager',
+        idDepartemen: getDept('Warehouse'),
+        deskripsiJabatan: 'Manage warehouse operations and inventory',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Warehouse Supervisor', idDepartemen: getDept('Warehouse') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Warehouse Supervisor',
+          idDepartemen: getDept('Warehouse'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Warehouse Supervisor', idDepartemen: getDept('Warehouse'), deskripsiJabatan: 'Supervise warehouse staff and operations', status: true },
+      create: {
+        namaJabatan: 'Warehouse Supervisor',
+        idDepartemen: getDept('Warehouse'),
+        deskripsiJabatan: 'Supervise warehouse staff and operations',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Warehouse Staff', idDepartemen: getDept('Warehouse') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Warehouse Staff',
+          idDepartemen: getDept('Warehouse'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Warehouse Staff', idDepartemen: getDept('Warehouse'), deskripsiJabatan: 'Handle loading, unloading, and inventory', status: true },
+      create: {
+        namaJabatan: 'Warehouse Staff',
+        idDepartemen: getDept('Warehouse'),
+        deskripsiJabatan: 'Handle loading, unloading, and inventory',
+        status: true,
+      },
     }),
 
     // Transportation
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Fleet Manager', idDepartemen: getDept('Transportation') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Fleet Manager',
+          idDepartemen: getDept('Transportation'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Fleet Manager', idDepartemen: getDept('Transportation'), deskripsiJabatan: 'Manage vehicle fleet and maintenance', status: true },
+      create: {
+        namaJabatan: 'Fleet Manager',
+        idDepartemen: getDept('Transportation'),
+        deskripsiJabatan: 'Manage vehicle fleet and maintenance',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Transportation Supervisor', idDepartemen: getDept('Transportation') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Transportation Supervisor',
+          idDepartemen: getDept('Transportation'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Transportation Supervisor', idDepartemen: getDept('Transportation'), deskripsiJabatan: 'Supervise drivers and delivery routes', status: true },
+      create: {
+        namaJabatan: 'Transportation Supervisor',
+        idDepartemen: getDept('Transportation'),
+        deskripsiJabatan: 'Supervise drivers and delivery routes',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Heavy Truck Driver', idDepartemen: getDept('Transportation') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Heavy Truck Driver',
+          idDepartemen: getDept('Transportation'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Heavy Truck Driver', idDepartemen: getDept('Transportation'), deskripsiJabatan: 'Drive heavy trucks for cargo delivery', status: true },
+      create: {
+        namaJabatan: 'Heavy Truck Driver',
+        idDepartemen: getDept('Transportation'),
+        deskripsiJabatan: 'Drive heavy trucks for cargo delivery',
+        status: true,
+      },
     }),
 
     // Distribution
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Distribution Manager', idDepartemen: getDept('Distribution') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Distribution Manager',
+          idDepartemen: getDept('Distribution'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Distribution Manager', idDepartemen: getDept('Distribution'), deskripsiJabatan: 'Plan and manage distribution network', status: true },
+      create: {
+        namaJabatan: 'Distribution Manager',
+        idDepartemen: getDept('Distribution'),
+        deskripsiJabatan: 'Plan and manage distribution network',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Distribution Supervisor', idDepartemen: getDept('Distribution') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Distribution Supervisor',
+          idDepartemen: getDept('Distribution'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Distribution Supervisor', idDepartemen: getDept('Distribution'), deskripsiJabatan: 'Supervise distribution team and routes', status: true },
+      create: {
+        namaJabatan: 'Distribution Supervisor',
+        idDepartemen: getDept('Distribution'),
+        deskripsiJabatan: 'Supervise distribution team and routes',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Route Planner', idDepartemen: getDept('Distribution') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Route Planner',
+          idDepartemen: getDept('Distribution'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Route Planner', idDepartemen: getDept('Distribution'), deskripsiJabatan: 'Plan optimal delivery routes', status: true },
+      create: {
+        namaJabatan: 'Route Planner',
+        idDepartemen: getDept('Distribution'),
+        deskripsiJabatan: 'Plan optimal delivery routes',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Dispatcher', idDepartemen: getDept('Distribution') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Dispatcher',
+          idDepartemen: getDept('Distribution'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Dispatcher', idDepartemen: getDept('Distribution'), deskripsiJabatan: 'Dispatch drivers and coordinate deliveries', status: true },
+      create: {
+        namaJabatan: 'Dispatcher',
+        idDepartemen: getDept('Distribution'),
+        deskripsiJabatan: 'Dispatch drivers and coordinate deliveries',
+        status: true,
+      },
     }),
 
     // Customer Service
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'CS Manager', idDepartemen: getDept('Customer Service') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'CS Manager',
+          idDepartemen: getDept('Customer Service'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'CS Manager', idDepartemen: getDept('Customer Service'), deskripsiJabatan: 'Manage customer service operations', status: true },
+      create: {
+        namaJabatan: 'CS Manager',
+        idDepartemen: getDept('Customer Service'),
+        deskripsiJabatan: 'Manage customer service operations',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Customer Service Officer', idDepartemen: getDept('Customer Service') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Customer Service Officer',
+          idDepartemen: getDept('Customer Service'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Customer Service Officer', idDepartemen: getDept('Customer Service'), deskripsiJabatan: 'Handle customer inquiries and complaints', status: true },
+      create: {
+        namaJabatan: 'Customer Service Officer',
+        idDepartemen: getDept('Customer Service'),
+        deskripsiJabatan: 'Handle customer inquiries and complaints',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Call Center Agent', idDepartemen: getDept('Customer Service') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Call Center Agent',
+          idDepartemen: getDept('Customer Service'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Call Center Agent', idDepartemen: getDept('Customer Service'), deskripsiJabatan: 'Answer customer calls and provide support', status: true },
+      create: {
+        namaJabatan: 'Call Center Agent',
+        idDepartemen: getDept('Customer Service'),
+        deskripsiJabatan: 'Answer customer calls and provide support',
+        status: true,
+      },
     }),
 
     // Sales & Marketing
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Sales Manager', idDepartemen: getDept('Sales & Marketing') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Sales Manager',
+          idDepartemen: getDept('Sales & Marketing'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Sales Manager', idDepartemen: getDept('Sales & Marketing'), deskripsiJabatan: 'Lead sales team and achieve targets', status: true },
+      create: {
+        namaJabatan: 'Sales Manager',
+        idDepartemen: getDept('Sales & Marketing'),
+        deskripsiJabatan: 'Lead sales team and achieve targets',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Sales Executive', idDepartemen: getDept('Sales & Marketing') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Sales Executive',
+          idDepartemen: getDept('Sales & Marketing'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Sales Executive', idDepartemen: getDept('Sales & Marketing'), deskripsiJabatan: 'Acquire new clients and maintain relationships', status: true },
+      create: {
+        namaJabatan: 'Sales Executive',
+        idDepartemen: getDept('Sales & Marketing'),
+        deskripsiJabatan: 'Acquire new clients and maintain relationships',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Marketing Staff', idDepartemen: getDept('Sales & Marketing') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Marketing Staff',
+          idDepartemen: getDept('Sales & Marketing'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Marketing Staff', idDepartemen: getDept('Sales & Marketing'), deskripsiJabatan: 'Execute marketing campaigns and promotions', status: true },
+      create: {
+        namaJabatan: 'Marketing Staff',
+        idDepartemen: getDept('Sales & Marketing'),
+        deskripsiJabatan: 'Execute marketing campaigns and promotions',
+        status: true,
+      },
     }),
 
     // Procurement
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Procurement Manager', idDepartemen: getDept('Procurement') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Procurement Manager',
+          idDepartemen: getDept('Procurement'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Procurement Manager', idDepartemen: getDept('Procurement'), deskripsiJabatan: 'Manage procurement of vehicles and supplies', status: true },
+      create: {
+        namaJabatan: 'Procurement Manager',
+        idDepartemen: getDept('Procurement'),
+        deskripsiJabatan: 'Manage procurement of vehicles and supplies',
+        status: true,
+      },
     }),
     prisma.refJabatan.upsert({
-      where: { namaJabatan_idDepartemen: { namaJabatan: 'Procurement Staff', idDepartemen: getDept('Procurement') } },
+      where: {
+        namaJabatan_idDepartemen: {
+          namaJabatan: 'Procurement Staff',
+          idDepartemen: getDept('Procurement'),
+        },
+      },
       update: {},
-      create: { namaJabatan: 'Procurement Staff', idDepartemen: getDept('Procurement'), deskripsiJabatan: 'Handle purchasing and vendor relations', status: true },
+      create: {
+        namaJabatan: 'Procurement Staff',
+        idDepartemen: getDept('Procurement'),
+        deskripsiJabatan: 'Handle purchasing and vendor relations',
+        status: true,
+      },
     }),
   ]);
 
@@ -268,14 +548,18 @@ export async function seedLogisticsDepartments() {
   console.log('\n📋 Positions by Department:');
 
   for (const dept of departments) {
-    const deptJabatan = jabatan.filter((j) => j.idDepartemen === dept.idDepartemen);
+    const deptJabatan = jabatan.filter(
+      (j) => j.idDepartemen === dept.idDepartemen,
+    );
     if (deptJabatan.length > 0) {
       console.log(`\n   ${dept.namaDepartemen}:`);
       deptJabatan.forEach((j) => console.log(`      - ${j.namaJabatan}`));
     }
   }
 
-  console.log('\n═══════════════════════════════════════════════════════════\n');
+  console.log(
+    '\n═══════════════════════════════════════════════════════════\n',
+  );
 }
 
 // If run directly

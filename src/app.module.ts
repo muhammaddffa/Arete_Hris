@@ -25,6 +25,7 @@ import { FormModule } from './form/form.module';
 import { QuestionModule } from './question/question.module';
 import { OptionModule } from './option/option.module';
 import { AnswerModule } from './answer/answer.module';
+import { JabatanPermissionModule } from './jabatan-permission/jabatan-permission.module';
 // RoleModule dihapus — tidak ada lagi tabel role
 
 @Module({
@@ -68,6 +69,7 @@ import { AnswerModule } from './answer/answer.module';
     QuestionModule,
     OptionModule,
     AnswerModule,
+    JabatanPermissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

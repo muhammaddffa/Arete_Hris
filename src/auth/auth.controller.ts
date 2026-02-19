@@ -141,7 +141,7 @@ export class AuthController {
   }
 
   @Get('users')
-  @RequirePermission('view_karyawan', PERMISSION.READ)
+  @RequirePermission('manage_karyawan', PERMISSION.READ)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Daftar karyawan yang memiliki akun login' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -160,7 +160,7 @@ export class AuthController {
   }
 
   @Get('users/:idKaryawan')
-  @RequirePermission('view_karyawan', PERMISSION.READ)
+  @RequirePermission('manage_karyawan', PERMISSION.READ)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Detail karyawan by ID' })
   @ApiParam({ name: 'idKaryawan', format: 'uuid' })

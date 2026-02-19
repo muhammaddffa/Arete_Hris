@@ -7,30 +7,56 @@ export async function seedLogisticsKaryawan() {
   console.log('📝 Creating Sample Logistics Karyawan (with Auth)...\n');
 
   // ===== GET REQUIRED JABATAN =====
-  const hrDept = await prisma.refDepartemen.findFirst({ where: { namaDepartemen: 'Human Resource' } });
-  const opsDept = await prisma.refDepartemen.findFirst({ where: { namaDepartemen: 'Operations' } });
-  const transportDept = await prisma.refDepartemen.findFirst({ where: { namaDepartemen: 'Transportation' } });
-  const warehouseDept = await prisma.refDepartemen.findFirst({ where: { namaDepartemen: 'Warehouse' } });
+  const hrDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Human Resource' },
+  });
+  const opsDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Operations' },
+  });
+  const transportDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Transportation' },
+  });
+  const warehouseDept = await prisma.refDepartemen.findFirst({
+    where: { namaDepartemen: 'Warehouse' },
+  });
 
   if (!hrDept || !opsDept || !transportDept || !warehouseDept) {
-    throw new Error('Required departments not found. Run seedLogisticsDepartments() first!');
+    throw new Error(
+      'Required departments not found. Run seedLogisticsDepartments() first!',
+    );
   }
 
   const hrManagerJabatan = await prisma.refJabatan.findFirst({
     where: { namaJabatan: 'HR Manager', idDepartemen: hrDept.idDepartemen },
   });
   const opsManagerJabatan = await prisma.refJabatan.findFirst({
-    where: { namaJabatan: 'Operations Manager', idDepartemen: opsDept.idDepartemen },
+    where: {
+      namaJabatan: 'Operations Manager',
+      idDepartemen: opsDept.idDepartemen,
+    },
   });
   const driverJabatan = await prisma.refJabatan.findFirst({
-    where: { namaJabatan: 'Heavy Truck Driver', idDepartemen: transportDept.idDepartemen },
+    where: {
+      namaJabatan: 'Heavy Truck Driver',
+      idDepartemen: transportDept.idDepartemen,
+    },
   });
   const warehouseJabatan = await prisma.refJabatan.findFirst({
-    where: { namaJabatan: 'Warehouse Staff', idDepartemen: warehouseDept.idDepartemen },
+    where: {
+      namaJabatan: 'Warehouse Staff',
+      idDepartemen: warehouseDept.idDepartemen,
+    },
   });
 
-  if (!hrManagerJabatan || !opsManagerJabatan || !driverJabatan || !warehouseJabatan) {
-    throw new Error('Required jabatan not found. Run seedLogisticsDepartments() first!');
+  if (
+    !hrManagerJabatan ||
+    !opsManagerJabatan ||
+    !driverJabatan ||
+    !warehouseJabatan
+  ) {
+    throw new Error(
+      'Required jabatan not found. Run seedLogisticsDepartments() first!',
+    );
   }
 
   console.log('═══════════════════════════════════════════════════════════');
@@ -52,7 +78,9 @@ export async function seedLogisticsKaryawan() {
     tanggalMasuk: Date;
     jabatanLabel: string;
   }) {
-    const existing = await prisma.refKaryawan.findUnique({ where: { nik: data.nik } });
+    const existing = await prisma.refKaryawan.findUnique({
+      where: { nik: data.nik },
+    });
     if (existing) {
       console.log(`     ✅ Already exists: ${data.nama}\n`);
       return existing;

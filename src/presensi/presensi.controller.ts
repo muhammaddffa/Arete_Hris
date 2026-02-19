@@ -59,7 +59,7 @@ export class PresensiController {
   }
 
   @Post('clock-in')
-  @RequirePermission('view_presensi', PERMISSION.CREATE)
+  @RequirePermission('own_presensi', PERMISSION.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Clock in karyawan' })
   async clockIn(@Body() clockInDto: ClockInDto, @CurrentUser() user: any) {
@@ -78,7 +78,7 @@ export class PresensiController {
   }
 
   @Post('clock-out/:idKaryawan')
-  @RequirePermission('view_presensi', PERMISSION.UPDATE)
+  @RequirePermission('own_presensi', PERMISSION.UPDATE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Clock out karyawan' })
   @ApiParam({ name: 'idKaryawan', description: 'ID Karyawan (UUID)' })
@@ -133,7 +133,7 @@ export class PresensiController {
   }
 
   @Get('my-presensi/summary')
-  @RequirePermission('view_presensi', PERMISSION.READ)
+  @RequirePermission('own_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get summary presensi sendiri' })
   @ApiQuery({ name: 'month', required: true, example: 1 })
@@ -156,7 +156,7 @@ export class PresensiController {
   }
 
   @Get('my-presensi')
-  @RequirePermission('view_presensi', PERMISSION.READ)
+  @RequirePermission('own_presensi', PERMISSION.READ)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get presensi sendiri' })
   @ApiQuery({ name: 'month', required: false, example: 1 })
